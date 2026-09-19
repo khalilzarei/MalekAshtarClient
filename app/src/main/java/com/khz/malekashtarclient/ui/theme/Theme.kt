@@ -1,58 +1,69 @@
 package com.khz.malekashtarclient.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
+/**
+ * تم اصلی اپ: همیشه حالت تیره، گرادیان بنفش، تأکید طلایی
+ *
+ * تمام رنگ‌ها hardcoded به تم شیشه‌ای داده شده در پرامپت هستند.
+ * حالت سیستم (روشن/تیره) نادیده گرفته می‌شود.
+ */
+private val MalekAshtarColorScheme = darkColorScheme(
+    primary = GoldPrimary,
+    onPrimary = GoldOn,
+    primaryContainer = PurplePrimary,
+    onPrimaryContainer = androidx.compose.ui.graphics.Color.White,
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    secondary = BlueAccent,
+    onSecondary = androidx.compose.ui.graphics.Color.White,
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    background = PurpleBgDeep,
+    onBackground = androidx.compose.ui.graphics.Color.White,
+
+    surface = PurpleBgMid,
+    onSurface = androidx.compose.ui.graphics.Color.White,
+    surfaceVariant = PurplePrimary,
+    onSurfaceVariant = androidx.compose.ui.graphics.Color.White,
+
+    error = RedError,
+    onError = androidx.compose.ui.graphics.Color.White,
+
+    outline = GlassBorder,
+    outlineVariant = WhiteTransparent15
 )
 
 @Composable
-fun MalekAshtarClientTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+fun MalekAshtarTheme(
+    @Suppress("UNUSED_PARAMETER") darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
+    // همیشه dark (طبق پرامپت)
+    val colorScheme = MalekAshtarColorScheme
 
-        darkTheme                                                      -> DarkColorScheme
-        else                                                           -> LightColorScheme
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window
+            if (window != null) {
+                window.statusBarColor = PurpleBgDeep.toArgb()
+                window.navigationBarColor = PurpleBgDeep.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+                WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
+            }
+        }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = MalekAshtarTypography,
         content = content
     )
 }
