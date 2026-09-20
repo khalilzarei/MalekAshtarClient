@@ -1,16 +1,21 @@
 package com.khz.malekashtarclient.ui.chat
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,11 +31,11 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,19 +48,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.khz.malekashtarclient.FootballSchoolApp
 import com.khz.malekashtarclient.core.network.NetworkResult
-import com.khz.malekashtarclient.core.util.toPersianDigits
 import com.khz.malekashtarclient.domain.model.ChatMessage
+import com.khz.malekashtarclient.domain.model.ChatRoom
+import com.khz.malekashtarclient.domain.model.ChatRoomUser
 import com.khz.malekashtarclient.ui.components.AvatarView
 import com.khz.malekashtarclient.ui.components.GlassCard3D
 import com.khz.malekashtarclient.ui.components.GlassTopBar
@@ -63,19 +65,18 @@ import com.khz.malekashtarclient.ui.theme.GoldOn
 import com.khz.malekashtarclient.ui.theme.GoldPrimary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * صفحه‌ی چت — بدون ViewModel (طبق پرامپت)
+ * ChatScreen
  *
- * - targetUserId: برای ساخت اتاق دو نفره؛ null برای اتاق‌های موجود
- * - roomId: اگر از لیست اتاق‌ها آمده
- * - polling ۵ ثانیه فقط در STARTED
- * - markAsRead بعد از هر refresh
- * - ارسال در try/finally (sending همیشه آزاد)
- * - اگر isLocked: نوار ارسال با پیام قفل جایگزین می‌شود
- * - نوار ارسال RTL + آیکون Send قرینه
+ * پشتیبانی از دو حالت:
+ * 1. ورود با roomId  -> اتاق موجود
+ * 2. ورود با targetUserId -> ساخت/دریافت اتاق خصوصی
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChatScreen(
     onBack: () -> Unit,
@@ -85,20 +86,13 @@ fun ChatScreen(
 ) {
     val context = LocalContext.current
     val container = (context.applicationContext as FootballSchoolApp).container
+
     val chatRepo = container.chatRepository
     val sessionManager = container.sessionManager
     val scope = rememberCoroutineScope()
 
     var currentRoomId by remember { mutableStateOf(roomId) }
-    var roomTitle by remember {
-        mutableStateOf(
-            initialTitle
-                    ?: "گفتگو"
-        )
-    }
-    var isGroup by remember { mutableStateOf(false) }
-    var isLocked by remember { mutableStateOf(false) }
-    var memberCount by remember { mutableStateOf(0) }
+    var room by remember { mutableStateOf<ChatRoom?>(null) }
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var messageText by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
@@ -107,251 +101,433 @@ fun ChatScreen(
     var currentUserId by remember { mutableStateOf<Int?>(null) }
 
     val listState = rememberLazyListState()
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val isKeyboardVisible = WindowInsets.isImeVisible
 
-    // ─── بارگذاری اولیه: ساخت/دریافت room (اگر لازم) + loadMessages ───
+    /* ---------- شناسه کاربر جاری ---------- */
+    LaunchedEffect(Unit) {
+        currentUserId = sessionManager.userId.first()
+            ?.toIntOrNull()
+    }
+
+    /* ---------- بارگذاری اتاق ---------- */
+    suspend fun loadRoom() {
+        val rid = currentRoomId
+
+        // حالت ساخت اتاق خصوصی جدید
+        if (rid == null) {
+            if (targetUserId == null || targetUserId <= 0) {
+                error = "شناسه کاربر مقصد مشخص نیست"
+                return
+            }
+
+            when (val result = chatRepo.getOrCreatePrivateRoom(targetUserId)) {
+                is NetworkResult.Success -> {
+                    room = result.data
+                    currentRoomId = result.data.id
+                }
+
+                is NetworkResult.Error   -> error = result.message
+                is NetworkResult.Loading -> Unit
+            }
+            return
+        }
+
+        // حالت اتاق موجود
+        when (val result = chatRepo.rooms()) {
+            is NetworkResult.Success -> {
+                room = result.data.firstOrNull { it.id == rid }
+                if (room == null) error = "اطلاعات گفتگو پیدا نشد"
+            }
+
+            is NetworkResult.Error   -> error = result.message
+            is NetworkResult.Loading -> Unit
+        }
+    }
+
+    /* ---------- بارگذاری پیام‌ها ---------- */
+    suspend fun loadMessages() {
+        val rid = currentRoomId
+                ?: return
+
+        when (val result = chatRepo.getMessages(
+            roomId = rid,
+            limit = 50
+        )) {
+            is NetworkResult.Success -> {
+                messages = result.data
+                result.data.maxOfOrNull { it.id }
+                    ?.let { lastId ->
+                        chatRepo.markAsRead(
+                            rid,
+                            lastId
+                        )
+                    }
+            }
+
+            is NetworkResult.Error   -> {
+                if (messages.isEmpty()) error = result.message
+            }
+
+            is NetworkResult.Loading -> Unit
+        }
+    }
+
+    /* ---------- بارگذاری اولیه ---------- */
     LaunchedEffect(
-        targetUserId,
-        roomId
+        roomId,
+        targetUserId
     ) {
         loading = true
         error = null
-        currentUserId = sessionManager.userId.first()
-            ?.toIntOrNull()
-
-        if (currentRoomId == null && targetUserId != null) {
-            when (val r = chatRepo.getOrCreatePrivateRoom(targetUserId)) {
-                is NetworkResult.Success -> {
-                    val room = r.data
-                    currentRoomId = room.id
-                    // برای age_group: targetUserName = null و targetUserName در سرور = ageGroupTitle
-                    // برای دو نفره: targetUserName = نام طرف
-                    roomTitle = when {
-                        room.isGroup -> room.ageGroupTitle
-                                ?: room.targetUserName
-                                ?: roomTitle
-
-                        else         -> room.targetUserName
-                                ?: roomTitle
-                    }
-                    isGroup = room.isGroup
-                    isLocked = room.isLocked
-                    memberCount = room.memberCount
-                }
-
-                is NetworkResult.Error   -> {
-                    error = r.message
-                    loading = false
-                    return@LaunchedEffect
-                }
-
-                else                     -> Unit
-            }
-        }
-
-        // بارگذاری اولین سری پیام‌ها
-        currentRoomId?.let {
-            loadMessages(
-                chatRepo,
-                it
-            ) { msgs -> messages = msgs }
-        }
+        loadRoom()
+        loadMessages()
         loading = false
     }
 
-    // ─── polling ۵ ثانیه (فقط در ON_START) ───
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) {
-                scope.launch {
-                    while (true) {
-                        currentRoomId?.let {
-                            loadMessages(
-                                chatRepo,
-                                it
-                            ) { msgs -> messages = msgs }
-                        }
-                        delay(5_000)
-                    }
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
+    /* ---------- Polling پیام‌ها ---------- */
+    LaunchedEffect(currentRoomId) {
+        while (isActive) {
+            delay(3000.milliseconds)
 
-    // اسکرول خودکار به آخرین پیام
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
-        }
-    }
+            val rid = currentRoomId
+                    ?: continue
 
-    // ─── ارسال پیام ───
-    fun onSend() {
-        val rid = currentRoomId
-                ?: return
-        val text = messageText.trim()
-        if (text.isEmpty() || sending) return
+            when (val result = chatRepo.getMessages(
+                roomId = rid,
+                limit = 50
+            )) {
+                is NetworkResult.Success -> {
+                    val merged = (messages + result.data).distinctBy { it.id }
+                        .sortedBy { it.id }
 
-        scope.launch {
-            sending = true
-            try {
-                when (val r = chatRepo.sendMessage(
-                    rid,
-                    text
-                )) {
-                    is NetworkResult.Success -> {
-                        messageText = ""
-                        loadMessages(
-                            chatRepo,
-                            rid
-                        ) { msgs -> messages = msgs }
-                    }
-
-                    is NetworkResult.Error   -> {
-                        error = r.message
-                        if (r.message.contains("قفل")) isLocked = true
-                    }
-
-                    else                     -> Unit
-                }
-            } finally {
-                sending = false
-            }
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .imePadding()
-    ) {
-        GlassTopBar(
-            title = if (isGroup) "$roomTitle (${memberCount.toPersianDigits()} عضو)" else roomTitle,
-            onBack = onBack
-        )
-
-        Box(Modifier.weight(1f)) {
-            when {
-                loading -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = GoldPrimary)
-                }
-
-                error != null && messages.isEmpty() -> Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = error!!,
-                        color = Color(0xFFFF8A80),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    TextButton(onClick = {
-                        scope.launch {
-                            error = null
-                            currentRoomId?.let {
-                                loadMessages(
-                                    chatRepo,
-                                    it
-                                ) { msgs -> messages = msgs }
+                    if (merged != messages) {
+                        messages = merged
+                        result.data.maxOfOrNull { it.id }
+                            ?.let { lastId ->
+                                chatRepo.markAsRead(
+                                    rid,
+                                    lastId
+                                )
                             }
-                        }
-                    }) {
-                        Text(
-                            "تلاش مجدد",
-                            color = GoldPrimary
-                        )
                     }
                 }
 
-                messages.isEmpty() -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "هنوز پیامی رد و بدل نشده",
-                            color = Color.White.copy(0.6f),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "اولین پیام را ارسال کنید",
-                            color = Color.White.copy(0.4f),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-
-                else -> LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        horizontal = 12.dp,
-                        vertical = 8.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(messages) { msg ->
-                        MessageBubble(
-                            message = msg,
-                            isMine = msg.senderId == currentUserId,
-                            isGroup = isGroup
-                        )
-                    }
-                }
+                is NetworkResult.Error   -> Unit
+                is NetworkResult.Loading -> Unit
             }
         }
+    }
 
-        // نوار ارسال / قفل
-        if (currentRoomId != null) {
-            if (isLocked) {
-                LockedBar()
-            } else {
+    /* ---------- اطلاعات نمایشی ---------- */
+    val currentRoom = room
+    val otherUser: ChatRoomUser? = currentRoom?.users?.firstOrNull { it.id != currentUserId }
+
+    val roomTitle = if (currentRoom?.isGroup == true) {
+        currentRoom.title.takeIf { it.isNotBlank() }
+                ?: initialTitle
+                ?: "گروه"
+    } else {
+        otherUser?.fullName?.takeIf { it.isNotBlank() }
+                ?: currentRoom?.title?.takeIf { it.isNotBlank() }
+                ?: initialTitle
+                ?: "گفتگو"
+    }
+
+    val roomImage = if (currentRoom?.isGroup == true) {
+        currentRoom.image?.takeIf { it.isNotBlank() }
+    } else {
+        otherUser?.avatar?.takeIf { it.isNotBlank() }
+                ?: currentRoom?.image?.takeIf { it.isNotBlank() }
+    }
+
+    val roomSubtitle = if (currentRoom?.isGroup == true) {
+        "${currentRoom.users.size} عضو"
+    } else {
+        otherUser?.role?.takeIf { it.isNotBlank() }
+                ?: "گفتگوی خصوصی"
+    }
+
+    /* ---------- Scaffold ---------- */
+    Scaffold(
+        containerColor = Color.Transparent,
+        topBar = {
+            GlassTopBar(
+                title = roomTitle,
+                onBack = onBack
+            )
+        }) { padding ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+
+            /* ---------- هدر ---------- */
+            RoomHeader(
+                title = roomTitle,
+                image = roomImage,
+                subtitle = roomSubtitle
+            )
+
+            /* ---------- پیام‌ها ---------- */
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                when {
+
+                    loading -> LoadingState()
+
+                    error != null && messages.isEmpty() -> ErrorState(
+                        message = error
+                                ?: "خطا در دریافت اطلاعات",
+                        onRetry = {
+                            scope.launch {
+                                loading = true
+                                error = null
+                                loadRoom()
+                                loadMessages()
+                                loading = false
+                            }
+                        })
+
+                    messages.isEmpty() -> EmptyState()
+
+                    else -> MessagesList(
+                        messages = messages,
+                        listState = listState,
+                        currentUserId = currentUserId,
+                        isGroup = currentRoom?.isGroup == true,
+                        bottomPadding = if (isKeyboardVisible) 4.dp else 8.dp
+                    )
+                }
+            }
+
+            /* ---------- نوار ارسال ---------- */
+            if (currentRoomId != null) {
                 MessageInputBar(
                     text = messageText,
                     onTextChange = { messageText = it },
                     sending = sending,
-                    onSend = { onSend() })
+                    onSend = {
+                        if (messageText.isBlank() || sending) return@MessageInputBar
+
+                        val rid = currentRoomId
+                                ?: return@MessageInputBar
+                        val text = messageText.trim()
+
+                        scope.launch {
+                            sending = true
+                            try {
+                                when (val result = chatRepo.sendMessage(
+                                    rid,
+                                    text
+                                )) {
+                                    is NetworkResult.Success -> {
+                                        messages = (messages + result.data).distinctBy { it.id }
+                                            .sortedBy { it.id }
+                                        messageText = ""
+                                    }
+
+                                    is NetworkResult.Error   -> {
+                                        Toast.makeText(
+                                            context,
+                                            result.message,
+                                            Toast.LENGTH_SHORT
+                                        )
+                                            .show()
+                                    }
+
+                                    is NetworkResult.Loading -> Unit
+                                }
+                            } catch (_: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    "ارسال پیام ناموفق بود",
+                                    Toast.LENGTH_SHORT
+                                )
+                                    .show()
+                            } finally {
+                                sending = false
+                            }
+                        }
+                    })
+            }
+        }
+    }
+
+    /* ---------- اسکرول خودکار ---------- */
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            try {
+                listState.animateScrollToItem(messages.lastIndex)
+            } catch (_: Exception) {
+                Unit
+            }
+        }
+    }
+
+    /* ---------- اسکرول مجدد بعد از باز شدن کیبورد ---------- */
+    LaunchedEffect(isKeyboardVisible) {
+        if (isKeyboardVisible && messages.isNotEmpty()) {
+            delay(120)
+            try {
+                listState.scrollToItem(messages.lastIndex)
+            } catch (_: Exception) {
+                Unit
             }
         }
     }
 }
 
-/** بارگذاری پیام‌ها + markAsRead */
-private suspend fun loadMessages(
-    chatRepo: com.khz.malekashtarclient.data.repository.ChatRepository,
-    roomId: Int,
-    onLoaded: (List<ChatMessage>) -> Unit
-) {
-    when (val r = chatRepo.getMessages(
-        roomId,
-        limit = 50
-    )) {
-        is NetworkResult.Success -> {
-            onLoaded(r.data)
-            r.data.maxOfOrNull { it.id }
-                ?.let { lastId ->
-                    chatRepo.markAsRead(
-                        roomId,
-                        lastId
-                    )
-                }
-        }
+/* =========================================================
+ *  بخش‌های فرعی (Sub-Composables) برای خوانایی بهتر
+ * ========================================================= */
 
-        is NetworkResult.Error   -> Unit
-        else                     -> Unit
+@Composable
+private fun RoomHeader(
+    title: String,
+    image: String?,
+    subtitle: String
+) {
+    GlassCard3D(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = 12.dp,
+                bottom = 8.dp
+            )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AvatarView(
+                name = title,
+                avatarUrl = image,
+                size = 56.dp,
+                accentColor = GoldPrimary
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.6f)
+                )
+            }
+        }
     }
 }
 
+@Composable
+private fun LoadingState() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(color = GoldPrimary)
+    }
+}
+
+@Composable
+private fun ErrorState(
+    message: String,
+    onRetry: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = message,
+                color = Color(0xFFFF8A80),
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            TextButton(onClick = onRetry) {
+                Text(
+                    text = "تلاش مجدد",
+                    color = GoldPrimary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyState() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "هنوز پیامی رد و بدل نشده",
+                color = Color.White.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "اولین پیام را ارسال کنید",
+                color = Color.White.copy(alpha = 0.4f),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessagesList(
+    messages: List<ChatMessage>,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    currentUserId: Int?,
+    isGroup: Boolean,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 12.dp,
+            end = 12.dp,
+            top = 8.dp,
+            bottom = bottomPadding
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(
+            items = messages,
+            key = { it.id }) { message ->
+            MessageBubble(
+                message = message,
+                isMine = message.senderId == currentUserId,
+                isGroup = isGroup
+            )
+        }
+    }
+}
+
+/* ---------- حباب پیام ---------- */
 @Composable
 private fun MessageBubble(
     message: ChatMessage,
@@ -360,21 +536,28 @@ private fun MessageBubble(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
+        horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom
     ) {
+
         if (!isMine) {
             AvatarView(
-                name = message.senderName,
+                name = message.senderName
+                        ?: "?",
+                avatarUrl = message.senderAvatar,
                 size = 32.dp,
                 accentColor = Color(0xFF4FC3F7)
             )
             Spacer(Modifier.width(6.dp))
         }
 
-        Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
+        Column(
+            horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
+        ) {
+
             if (isGroup && !isMine && !message.senderName.isNullOrBlank()) {
                 Text(
-                    text = message.senderName,
+                    text = message.senderName!!,
                     color = Color(0xFF4FC3F7),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(
@@ -388,72 +571,99 @@ private fun MessageBubble(
                 RoundedCornerShape(
                     topStart = 18.dp,
                     topEnd = 18.dp,
-                    bottomStart = 4.dp,
-                    bottomEnd = 18.dp
+                    bottomStart = 18.dp,
+                    bottomEnd = 4.dp
                 )
             } else {
                 RoundedCornerShape(
                     topStart = 18.dp,
                     topEnd = 18.dp,
-                    bottomStart = 18.dp,
-                    bottomEnd = 4.dp
+                    bottomStart = 4.dp,
+                    bottomEnd = 18.dp
                 )
             }
 
-            val bgBrush = if (isMine) {
+            val background = if (isMine) {
                 Brush.linearGradient(
                     listOf(
-                        GoldPrimary.copy(0.85f),
-                        GoldPrimary.copy(0.55f)
+                        GoldPrimary.copy(alpha = 0.92f),
+                        GoldPrimary.copy(alpha = 0.58f)
                     )
                 )
             } else {
                 Brush.linearGradient(
                     listOf(
-                        Color.White.copy(0.15f),
-                        Color.White.copy(0.08f)
+                        Color.White.copy(alpha = 0.16f),
+                        Color.White.copy(alpha = 0.07f)
                     )
                 )
             }
 
             Box(
                 modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    .clip(shape)
-                    .background(bgBrush)
+                    .widthIn(max = 290.dp)
+                    .background(
+                        brush = background,
+                        shape = shape
+                    )
                     .padding(
                         horizontal = 14.dp,
                         vertical = 10.dp
                     )
             ) {
-                Text(
-                    text = message.body,
-                    color = if (isMine) GoldOn else Color.White,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+                Column {
+                    Text(
+                        text = message.body,
+                        color = if (isMine) GoldOn else Color.White,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
 
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = message.createdAt?.takeLast(8)
-                    ?.take(5)
-                        ?: "",
-                color = Color.White.copy(0.4f),
-                style = MaterialTheme.typography.labelSmall
-            )
+                    Spacer(Modifier.height(3.dp))
+
+                    Text(
+                        text = message.createdAt?.takeLast(8)
+                            ?.take(5)
+                                ?: "",
+                        color = if (isMine) {
+                            GoldOn.copy(alpha = 0.7f)
+                        } else {
+                            Color.White.copy(alpha = 0.5f)
+                        },
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
         }
 
         if (isMine) {
             Spacer(Modifier.width(6.dp))
-            AvatarView(
-                name = null,
-                size = 32.dp,
-                accentColor = GoldPrimary
-            )
+
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                GoldPrimary,
+                                GoldPrimary.copy(alpha = 0.4f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "م",
+                    color = GoldOn,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
 
+/* ---------- نوار ورودی پیام ---------- */
 @Composable
 private fun MessageInputBar(
     text: String,
@@ -461,12 +671,19 @@ private fun MessageInputBar(
     sending: Boolean,
     onSend: () -> Unit
 ) {
-    // نوار راست‌چین برای RTL
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        GlassCard3D(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
+    GlassCard3D(
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding()
+            .padding(
+                start = 12.dp,
+                end = 12.dp,
+                top = 8.dp,
+                bottom = 10.dp
+            )
+    ) {
+        CompositionLocalProvider(
+            LocalLayoutDirection provides LayoutDirection.Rtl
         ) {
             Row(
                 modifier = Modifier
@@ -474,7 +691,17 @@ private fun MessageInputBar(
                     .padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // فیلد متن (وزن ۱، همیشه اول می‌آید = راست در RTL)
+
+                /* دکمه ارسال */
+                SendButton(
+                    enabled = text.isNotBlank() && !sending,
+                    sending = sending,
+                    onClick = onSend
+                )
+
+                Spacer(Modifier.width(8.dp))
+
+                /* فیلد متن */
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -482,66 +709,26 @@ private fun MessageInputBar(
                         .background(Color.White.copy(alpha = 0.08f))
                         .padding(
                             horizontal = 16.dp,
-                            vertical = 10.dp
+                            vertical = 11.dp
                         )
                 ) {
                     if (text.isEmpty()) {
                         Text(
-                            "پیام خود را بنویسید...",
-                            color = Color.White.copy(0.4f),
+                            text = "پیام خود را بنویسید...",
+                            color = Color.White.copy(alpha = 0.4f),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
+
                     BasicTextField(
                         value = text,
                         onValueChange = onTextChange,
                         modifier = Modifier.fillMaxWidth(),
                         textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
                         cursorBrush = SolidColor(GoldPrimary),
-                        singleLine = false
+                        singleLine = false,
+                        maxLines = 5
                     )
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                // دکمه ارسال (در RTL در سمت چپ نمایش داده می‌شود)
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    GoldPrimary.copy(alpha = if (text.isNotBlank() && !sending) 0.95f else 0.3f),
-                                    GoldPrimary.copy(alpha = if (text.isNotBlank() && !sending) 0.5f else 0.15f)
-                                )
-                            )
-                        )
-                        .then(
-                            if (text.isNotBlank() && !sending) Modifier.clickable(onClick = onSend)
-                            else Modifier
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (sending) {
-                        CircularProgressIndicator(
-                            color = GoldOn,
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "ارسال",
-                            tint = if (text.isNotBlank()) GoldOn else Color.White.copy(0.4f),
-                            modifier = Modifier
-                                .size(20.dp)
-                                .graphicsLayer(
-                                    scaleX = -1f,
-                                    scaleY = 1f
-                                )
-                        )
-                    }
                 }
             }
         }
@@ -549,28 +736,37 @@ private fun MessageInputBar(
 }
 
 @Composable
-private fun LockedBar() {
-    GlassCard3D(
+private fun SendButton(
+    enabled: Boolean,
+    sending: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "🔒",
-                style = MaterialTheme.typography.titleMedium
+            .size(46.dp)
+            .clip(CircleShape)
+            .background(
+                Brush.radialGradient(
+                    listOf(
+                        GoldPrimary.copy(alpha = if (enabled) 0.95f else 0.28f),
+                        GoldPrimary.copy(alpha = if (enabled) 0.48f else 0.12f)
+                    )
+                )
             )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "چت توسط مدیر قفل شده است",
-                color = Color.White.copy(0.85f),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
+            .then(if (enabled) Modifier.clickable { onClick() } else Modifier),
+        contentAlignment = Alignment.Center) {
+        if (sending) {
+            CircularProgressIndicator(
+                color = GoldOn,
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp
+            )
+        } else {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Send,
+                contentDescription = "ارسال",
+                tint = if (enabled) GoldOn else Color.White.copy(alpha = 0.35f),
+                modifier = Modifier.size(21.dp)
             )
         }
     }

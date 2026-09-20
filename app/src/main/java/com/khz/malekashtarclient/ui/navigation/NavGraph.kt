@@ -67,8 +67,7 @@ fun RootNavGraph() {
                     navController.navigate(Screen.ChangePassword.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
-                }
-            )
+                })
         }
 
         // ─── Login ───
@@ -90,8 +89,7 @@ fun RootNavGraph() {
                     scope.launch {
                         container.authRepository.logout()
                     }
-                }
-            )
+                })
         }
 
         // ─── ChangePassword ───
@@ -102,8 +100,7 @@ fun RootNavGraph() {
                         popUpTo(Screen.ChangePassword.route) { inclusive = true }
                     }
                 },
-                onBack = { navController.popBackStack() }
-            )
+                onBack = { navController.popBackStack() })
         }
 
         // ─── Dashboard ───
@@ -122,8 +119,7 @@ fun RootNavGraph() {
                             popUpTo(Screen.Dashboard.route) { inclusive = true }
                         }
                     }
-                }
-            )
+                })
         }
 
         // ─── News ───
@@ -136,9 +132,12 @@ fun RootNavGraph() {
             ClassesScreen(
                 onBack = { navController.popBackStack() },
                 onOpenChat = { userId, roomId ->
-                    navController.navigate(Screen.chatWithRoom(roomId, null))
-                }
-            )
+                    navController.navigate(
+                        Screen.chatWithRoom(
+                            roomId
+                        )
+                    )
+                })
         }
 
         // ─── Finance ───
@@ -159,18 +158,20 @@ fun RootNavGraph() {
                         popUpTo(Screen.Profile.route) { inclusive = true }
                     }
                 },
-                onBack = { navController.popBackStack() }
-            )
+                onBack = { navController.popBackStack() })
         }
 
         // ─── Chat: Room List ───
         composable(Screen.ChatRoomList.route) {
             ChatRoomListScreen(
-                onBack = { navController.popBackStack() },
-                onOpenRoom = { roomId, _, title, _ ->
-                    navController.navigate(Screen.chatWithRoom(roomId, title))
+                onBack = {
+                    navController.popBackStack()
                 },
-                onNewConversation = { navController.navigate(Screen.ChatContacts.route) }
+                onOpenChat = { roomId ->
+                    navController.navigate(
+                        Screen.chatWithRoom(roomId)
+                    )
+                },
             )
         }
 
@@ -178,10 +179,7 @@ fun RootNavGraph() {
         composable(Screen.ChatContacts.route) {
             ChatContactsScreen(
                 onBack = { navController.popBackStack() },
-                onSelect = { contact ->
-                    navController.navigate(Screen.chatWithUser(contact.userId))
-                }
-            )
+                onSelect = { coachUserId -> navController.navigate(Screen.chatWithUser(coachUserId)) })
         }
 
         // ─── Chat (پارامتریک) ───
@@ -190,12 +188,14 @@ fun RootNavGraph() {
             arguments = listOf(
                 navArgument("roomId") { type = NavType.IntType; defaultValue = -1 },
                 navArgument("userId") { type = NavType.IntType; defaultValue = -1 },
-                navArgument("title") { type = NavType.StringType; defaultValue = "" }
-            )
+                navArgument("title") { type = NavType.StringType; defaultValue = "" })
         ) { entry ->
-            val roomId = entry.arguments?.getInt("roomId")?.takeIf { it > 0 }
-            val userId = entry.arguments?.getInt("userId")?.takeIf { it > 0 }
-            val title = entry.arguments?.getString("title")?.takeIf { it.isNotBlank() }
+            val roomId = entry.arguments?.getInt("roomId")
+                ?.takeIf { it > 0 }
+            val userId = entry.arguments?.getInt("userId")
+                ?.takeIf { it > 0 }
+            val title = entry.arguments?.getString("title")
+                ?.takeIf { it.isNotBlank() }
 
             ChatScreen(
                 onBack = { navController.popBackStack() },

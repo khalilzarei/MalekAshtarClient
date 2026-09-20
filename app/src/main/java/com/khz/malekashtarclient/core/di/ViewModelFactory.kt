@@ -2,6 +2,14 @@ package com.khz.malekashtarclient.core.di
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.khz.malekashtarclient.ui.auth.AuthViewModel
+import com.khz.malekashtarclient.ui.chat.ChatRoomListViewModel
+import com.khz.malekashtarclient.ui.classes.ClassesViewModel
+import com.khz.malekashtarclient.ui.dashboard.DashboardViewModel
+import com.khz.malekashtarclient.ui.finance.FinanceViewModel
+import com.khz.malekashtarclient.ui.matches.MatchesViewModel
+import com.khz.malekashtarclient.ui.news.NewsListViewModel
+import com.khz.malekashtarclient.ui.profile.ProfileViewModel
 
 /**
  * Factory کلی برای ساخت ViewModelها از طریق ریپازیتوری‌های موجود در AppContainer.
@@ -16,66 +24,52 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return when (modelClass) {
             // Auth
-            com.khz.malekashtarclient.ui.auth.AuthViewModel::class.java ->
-                com.khz.malekashtarclient.ui.auth.AuthViewModel(
-                    container.authRepository,
-                    container.sessionManager
-                ) as T
+            AuthViewModel::class.java         -> AuthViewModel(
+                container.authRepository,
+                container.sessionManager
+            ) as T
 
             // Dashboard
-            com.khz.malekashtarclient.ui.dashboard.DashboardViewModel::class.java ->
-                com.khz.malekashtarclient.ui.dashboard.DashboardViewModel(
-                    container.clientRepository,
-                    container.authRepository,
-                    container.sessionManager
-                ) as T
+            DashboardViewModel::class.java    -> DashboardViewModel(
+                container.clientRepository,
+                container.authRepository,
+                container.sessionManager
+            ) as T
 
             // Profile
-            com.khz.malekashtarclient.ui.profile.ProfileViewModel::class.java ->
-                com.khz.malekashtarclient.ui.profile.ProfileViewModel(
-                    container.authRepository,
-                    container.clientRepository,
-                    container.sessionManager
-                ) as T
+            ProfileViewModel::class.java      -> ProfileViewModel(
+                container.authRepository,
+                container.clientRepository,
+                container.sessionManager
+            ) as T
 
             // News
-            com.khz.malekashtarclient.ui.news.NewsListViewModel::class.java ->
-                com.khz.malekashtarclient.ui.news.NewsListViewModel(
-                    container.clientRepository
-                ) as T
+            NewsListViewModel::class.java     -> NewsListViewModel(
+                container.clientRepository
+            ) as T
 
             // Classes
-            com.khz.malekashtarclient.ui.classes.ClassesViewModel::class.java ->
-                com.khz.malekashtarclient.ui.classes.ClassesViewModel(
-                    container.clientRepository,
-                    container.chatRepository
-                ) as T
+            ClassesViewModel::class.java      -> ClassesViewModel(
+                container.clientRepository,
+                container.chatRepository
+            ) as T
 
             // Finance
-            com.khz.malekashtarclient.ui.finance.FinanceViewModel::class.java ->
-                com.khz.malekashtarclient.ui.finance.FinanceViewModel(
-                    container.clientRepository
-                ) as T
+            FinanceViewModel::class.java      -> FinanceViewModel(
+                container.clientRepository
+            ) as T
 
             // Matches
-            com.khz.malekashtarclient.ui.matches.MatchesViewModel::class.java ->
-                com.khz.malekashtarclient.ui.matches.MatchesViewModel(
-                    container.clientRepository
-                ) as T
+            MatchesViewModel::class.java      -> MatchesViewModel(
+                container.clientRepository
+            ) as T
 
             // Chat Room List
-            com.khz.malekashtarclient.ui.chat.ChatRoomListViewModel::class.java ->
-                com.khz.malekashtarclient.ui.chat.ChatRoomListViewModel(
-                    container.chatRepository
-                ) as T
+            ChatRoomListViewModel::class.java -> ChatRoomListViewModel(
+                container.chatRepository
+            ) as T
 
-            // Chat Contacts
-            com.khz.malekashtarclient.ui.chat.ChatContactsViewModel::class.java ->
-                com.khz.malekashtarclient.ui.chat.ChatContactsViewModel(
-                    container.clientRepository
-                ) as T
-
-            else -> throw IllegalArgumentException("ViewModel ناشناخته: ${modelClass.name}")
+            else                              -> throw IllegalArgumentException("ViewModel ناشناخته: ${modelClass.name}")
         }
     }
 }

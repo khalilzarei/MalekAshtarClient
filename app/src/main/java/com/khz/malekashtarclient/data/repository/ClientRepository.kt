@@ -4,7 +4,6 @@ import com.khz.malekashtarclient.core.network.ApiErrorHandler
 import com.khz.malekashtarclient.core.network.NetworkResult
 import com.khz.malekashtarclient.data.mapper.ClientMapper.toDomain
 import com.khz.malekashtarclient.data.remote.ClientApi
-import com.khz.malekashtarclient.domain.model.ChatContact
 import com.khz.malekashtarclient.domain.model.MyChild
 import com.khz.malekashtarclient.domain.model.MyClass
 import com.khz.malekashtarclient.domain.model.MyFinance
@@ -16,24 +15,30 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 
-
 class ClientRepository(
     private val api: ClientApi
 ) {
 
-    /** بازیکن/بازیکنان مرتبط با این حساب (معمولاً ۰ یا ۱) */
+    /** بازیکن/بازیکنان مرتبط با این حساب */
     suspend fun myChildren(): NetworkResult<List<MyChild>> {
         return try {
             val response = api.myChildren()
+
             if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در دریافت اطلاعات بازیکن")
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در دریافت اطلاعات بازیکن"
+                )
             } else {
-                val list = response.data?.children?.mapNotNull { c -> c.toDomain() }
-                    ?: emptyList()
+                val list = response.data?.children?.mapNotNull { it.toDomain() }
+                        ?: emptyList()
+
                 NetworkResult.Success(list)
             }
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 
@@ -41,15 +46,22 @@ class ClientRepository(
     suspend fun mySchedule(): NetworkResult<List<MyScheduleItem>> {
         return try {
             val response = api.mySchedule()
+
             if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در دریافت برنامه‌ی جلسات")
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در دریافت برنامه‌ی جلسات"
+                )
             } else {
-                val list = response.data?.sessions?.mapNotNull { s -> s.toDomain() }
-                    ?: emptyList()
+                val list = response.data?.sessions?.mapNotNull { it.toDomain() }
+                        ?: emptyList()
+
                 NetworkResult.Success(list)
             }
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 
@@ -57,15 +69,22 @@ class ClientRepository(
     suspend fun myNews(): NetworkResult<List<NewsItem>> {
         return try {
             val response = api.myNews()
+
             if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در دریافت اخبار")
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در دریافت اخبار"
+                )
             } else {
-                val list = response.data?.news?.mapNotNull { n -> n.toDomain() }
-                    ?: emptyList()
+                val list = response.data?.news?.mapNotNull { it.toDomain() }
+                        ?: emptyList()
+
                 NetworkResult.Success(list)
             }
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 
@@ -73,31 +92,45 @@ class ClientRepository(
     suspend fun myClasses(): NetworkResult<List<MyClass>> {
         return try {
             val response = api.myClasses()
+
             if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در دریافت کلاس‌ها")
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در دریافت کلاس‌ها"
+                )
             } else {
-                val list = response.data?.classes?.mapNotNull { c -> c.toDomain() }
-                    ?: emptyList()
+                val list = response.data?.classes?.mapNotNull { it.toDomain() }
+                        ?: emptyList()
+
                 NetworkResult.Success(list)
             }
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 
-    /** صورت حساب بازیکن */
+    /** صورت‌حساب بازیکن */
     suspend fun myFinance(): NetworkResult<List<MyFinance>> {
         return try {
             val response = api.myFinance()
+
             if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در دریافت صورت حساب")
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در دریافت صورت حساب"
+                )
             } else {
-                val list = response.data?.finance?.mapNotNull { f -> f.toDomain() }
-                    ?: emptyList()
+                val list = response.data?.finance?.mapNotNull { it.toDomain() }
+                        ?: emptyList()
+
                 NetworkResult.Success(list)
             }
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 
@@ -105,47 +138,54 @@ class ClientRepository(
     suspend fun myMatches(): NetworkResult<List<MyMatch>> {
         return try {
             val response = api.myMatches()
+
             if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در دریافت مسابقات")
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در دریافت مسابقات"
+                )
             } else {
-                val list = response.data?.matches?.mapNotNull { m -> m.toDomain() }
-                    ?: emptyList()
+                val list = response.data?.matches?.mapNotNull { it.toDomain() }
+                        ?: emptyList()
+
                 NetworkResult.Success(list)
             }
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 
-    /** مخاطبین قابل گفتگو (ادمین‌ها + مربیان) */
-    suspend fun myChatContacts(): NetworkResult<List<ChatContact>> {
+    /** آپلود آواتار */
+    suspend fun uploadAvatar(
+        file: File
+    ): NetworkResult<Unit> {
         return try {
-            val response = api.myChatContacts()
-            if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در دریافت مخاطبین")
-            } else {
-                val list = response.data?.contacts?.mapNotNull { c -> c.toDomain() }
-                    ?: emptyList()
-                NetworkResult.Success(list)
-            }
-        } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
-        }
-    }
+            val body = file.asRequestBody(
+                "image/*".toMediaTypeOrNull()
+            )
 
-    /** آپلود آواتار از فایل محلی (از image picker) */
-    suspend fun uploadAvatar(file: File): NetworkResult<Unit> {
-        return try {
-            val body = file.asRequestBody("image/*".toMediaTypeOrNull())
-            val part = MultipartBody.Part.createFormData("avatar", file.name, body)
+            val part = MultipartBody.Part.createFormData(
+                "avatar",
+                file.name,
+                body
+            )
+
             val response = api.uploadAvatar(part)
+
             if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در آپلود عکس")
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در آپلود عکس"
+                )
             } else {
                 NetworkResult.Success(Unit)
             }
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 
@@ -153,13 +193,19 @@ class ClientRepository(
     suspend fun deleteAvatar(): NetworkResult<Unit> {
         return try {
             val response = api.deleteAvatar()
+
             if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در حذف عکس")
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در حذف عکس"
+                )
             } else {
                 NetworkResult.Success(Unit)
             }
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 }

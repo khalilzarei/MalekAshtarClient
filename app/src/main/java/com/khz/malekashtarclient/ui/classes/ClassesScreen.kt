@@ -1,6 +1,5 @@
 package com.khz.malekashtarclient.ui.classes
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -16,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,7 +26,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.khz.malekashtarclient.core.network.NetworkResult
@@ -40,17 +36,9 @@ import com.khz.malekashtarclient.ui.components.GlassBackground
 import com.khz.malekashtarclient.ui.components.GlassButton
 import com.khz.malekashtarclient.ui.components.GlassCard3D
 import com.khz.malekashtarclient.ui.components.GenericListScreen
-import com.khz.malekashtarclient.ui.theme.GoldPrimary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/**
- * صفحه‌ی کلاس‌ها
- *
- * - لیست کلاس‌های فعال بازیکن
- * - دکمه‌ی «گفتگو با مربی» در هر کارت → ساخت room و هدایت به ChatScreen
- * - در صورت خطا یا عدم یافتن مربی، Snackbar ۳ ثانیه
- */
 @Composable
 fun ClassesScreen(
     onBack: () -> Unit,
@@ -58,11 +46,17 @@ fun ClassesScreen(
 ) {
     val viewModel: ClassesViewModel = appViewModel()
     val state by viewModel.state.collectAsState()
-    val scope = rememberCoroutineScope()
-    var openingChat by remember { mutableStateOf(false) }
-    var chatError by remember { mutableStateOf<String?>(null) }
 
-    // پاک‌سازی خودکار Snackbar بعد از ۳ ثانیه
+    val scope = rememberCoroutineScope()
+
+    var openingChat by remember {
+        mutableStateOf(false)
+    }
+
+    var chatError by remember {
+        mutableStateOf<String?>(null)
+    }
+
     LaunchedEffect(chatError) {
         if (chatError != null) {
             delay(3000)
@@ -70,53 +64,77 @@ fun ClassesScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
         GlassBackground {
+
             GenericListScreen(
                 title = "کلاس‌ها",
-                state = state.list,
-                onRefresh = { viewModel.refresh() },
+                state = state,
+                onRefresh = {
+                    viewModel.refresh()
+                },
                 onBack = onBack
             ) { klass ->
+
                 ClassCard(
                     klass = klass,
                     openingChat = openingChat,
-                    onClick = {
-                        // کلیک روی کارت: پیش‌فرض گفتگو با مربی (اگر مربی دارد)
-                        if (!klass.coachName.isNullOrBlank()) {
-//                            onChatWithCoach()
-                        }
-                    },
+                    onClick = {},
                     onChatWithCoach = {
-                        val uid = viewModel.findCoachUserId(klass.coachName)
-                        if (uid == null) {
-                            chatError = "مربی در لیست مخاطبین یافت نشد"
+
+                        val coachUserId = klass.coachUserId
+
+                        if (coachUserId == null || coachUserId <= 0) {
+
+                            chatError = "شناسه کاربری مربی پیدا نشد"
+
                         } else {
+
                             scope.launch {
+
                                 openingChat = true
                                 chatError = null
-                                val r = viewModel.openChatWithCoach(uid)
-                                openingChat = false
-                                when (r) {
-                                    is NetworkResult.Success -> onOpenChat(uid, r.data.id)
-                                    is NetworkResult.Error -> chatError = r.message
+
+                                when (val result = viewModel.openChatWithCoach(
+                                    coachUserId
+                                )) {
+
+                                    is NetworkResult.Success -> {
+
+                                        openingChat = false
+
+                                        onOpenChat(
+                                            coachUserId,
+                                            result.data.id
+                                        )
+                                    }
+
+                                    is NetworkResult.Error   -> {
+
+                                        openingChat = false
+
+                                        chatError = result.message
+                                    }
+
                                     is NetworkResult.Loading -> Unit
                                 }
                             }
                         }
-                    }
-                )
+                    })
             }
         }
 
-        // Snackbar در BoxScope بیرونی (Modifier.align معتبر)
-        chatError?.let { msg ->
+        chatError?.let { message ->
+
             Snackbar(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(16.dp)
             ) {
-                Text(msg)
+                Text(text = message)
             }
         }
     }
@@ -129,91 +147,120 @@ private fun ClassCard(
     onClick: () -> Unit,
     onChatWithCoach: () -> Unit
 ) {
-    GlassCard3D(onClick = onClick) {
-        Column {
+    GlassCard3D(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = 16.dp,
+                vertical = 8.dp
+            ),
+        onClick = onClick
+    ) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+
             Text(
                 text = klass.title,
-                color = Color.White,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold
-                )
+                fontWeight = FontWeight.Bold
             )
 
-            if (!klass.ageGroupTitle.isNullOrBlank()) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = klass.ageGroupTitle,
-                    color = GoldPrimary,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Schedule,
-                    contentDescription = null,
-                    tint = Color.White.copy(0.5f),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = "${klass.enrolledCount?.toString()?.toPersianDigits() ?: "?"} / ${klass.capacity?.toString()?.toPersianDigits() ?: "?"} نفر",
-                    color = Color.White.copy(0.7f),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            if (!klass.location.isNullOrBlank()) {
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = Color.White.copy(0.5f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = klass.location,
-                        color = Color.White.copy(0.7f),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+            klass.ageGroupTitle?.takeIf { it.isNotBlank() }
+                ?.let {
+                    Text(text = it)
                 }
-            }
 
-            // برنامه‌ی هفتگی
+            klass.coachName?.takeIf { it.isNotBlank() }
+                ?.let {
+                    Text(text = "مربی: $it")
+                }
+
+            klass.location?.takeIf { it.isNotBlank() }
+                ?.let {
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+
+                        Spacer(
+                            modifier = Modifier.width(6.dp)
+                        )
+
+                        Text(text = it)
+                    }
+                }
+
             if (klass.schedules.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                klass.schedules.forEach { sched ->
-                    Text(
-                        text = "${sched.weekdayLabel} ${sched.startTime} - ${sched.endTime}",
-                        color = Color.White.copy(0.85f),
-                        style = MaterialTheme.typography.bodyMedium
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
                     )
+
+                    Spacer(
+                        modifier = Modifier.width(6.dp)
+                    )
+
+                    Text(
+                        text = klass.schedules.joinToString(" • ") {
+                            "${it.weekdayLabel} ${it.startTime}-${it.endTime}"
+                        })
                 }
             }
 
-            // مربی + دکمه‌ی گفتگو
-            if (!klass.coachName.isNullOrBlank()) {
-                Spacer(Modifier.height(14.dp))
+            if (klass.capacity != null || klass.enrolledCount != null) {
+
                 Text(
-                    text = "مربی: ${klass.coachName}",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.SemiBold
-                    )
-                )
-                Spacer(Modifier.height(10.dp))
-                Box(modifier = Modifier.clickable(onClick = onChatWithCoach)) {
-                    GlassButton(
-                        text = if (openingChat) "در حال اتصال..." else "گفتگو با مربی",
-                        onClick = onChatWithCoach,
-                        enabled = !openingChat
-                    )
-                }
+                    text = buildString {
+
+                        klass.enrolledCount?.let {
+                            append("ثبت‌نام: ")
+                            append(
+                                it.toString()
+                                    .toPersianDigits()
+                            )
+                        }
+
+                        klass.capacity?.let {
+
+                            if (length > 0) {
+                                append(" / ")
+                            }
+
+                            append("ظرفیت: ")
+                            append(
+                                it.toString()
+                                    .toPersianDigits()
+                            )
+                        }
+                    })
             }
+
+            GlassButton(
+                text = if (openingChat) {
+                    "در حال اتصال..."
+                } else {
+                    "گفتگو با مربی"
+                },
+                onClick = onChatWithCoach,
+                enabled = !openingChat,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

@@ -4,7 +4,6 @@ import com.khz.malekashtarclient.core.network.ApiResponse
 import com.khz.malekashtarclient.data.dto.request.MarkAsReadRequest
 import com.khz.malekashtarclient.data.dto.request.SendMessageRequest
 import com.khz.malekashtarclient.data.dto.response.ChatMessageDto
-import com.khz.malekashtarclient.data.dto.response.ChatRoomDto
 import com.khz.malekashtarclient.data.dto.response.ChatRoomListWrapperDto
 import com.khz.malekashtarclient.data.dto.response.CreateRoomWrapperDto
 import com.khz.malekashtarclient.data.dto.response.MessagesWrapperDto
@@ -16,50 +15,71 @@ import retrofit2.http.Query
 
 interface ChatApi {
 
-    /** GET chat/rooms → data.rooms[] */
+    /**
+     * لیست اتاق‌های کاربر فعلی
+     */
     @GET("chat/rooms")
     suspend fun rooms(): ApiResponse<ChatRoomListWrapperDto>
 
     /**
-     * POST chat/rooms — ساخت/دریافت اتاق دو نفره (idempotent)
-     * بدنه: {target_user_id: N} — room_type نفرست
+     * ایجاد یا دریافت Private Chat
+     *
+     * Backend کاربر فعلی را از Token تشخیص می‌دهد.
+     *
+     * Body:
+     * {
+     *     "target_user_id": 25
+     * }
      */
     @POST("chat/rooms")
     suspend fun createOrGetPrivateRoom(
         @Body body: Map<String, Int>
     ): ApiResponse<CreateRoomWrapperDto>
 
-    /** GET chat/rooms/{id}/messages?limit=50 → data.messages[] */
+    /**
+     * پیام‌های یک اتاق
+     */
     @GET("chat/rooms/{id}/messages")
     suspend fun messages(
         @Path("id") roomId: Int,
         @Query("limit") limit: Int = 50
     ): ApiResponse<MessagesWrapperDto>
 
-    /** POST chat/rooms/{id}/messages */
+    /**
+     * ارسال پیام
+     */
     @POST("chat/rooms/{id}/messages")
     suspend fun sendMessage(
         @Path("id") roomId: Int,
         @Body body: SendMessageRequest
     ): ApiResponse<MessageWrapperDto>
 
-    /** POST chat/rooms/{id}/read */
+    /**
+     * علامت‌گذاری پیام‌ها به عنوان خوانده‌شده
+     */
     @POST("chat/rooms/{id}/read")
     suspend fun markAsRead(
         @Path("id") roomId: Int,
         @Body body: MarkAsReadRequest
     ): ApiResponse<Any?>
 
-    /** POST chat/rooms/{id}/lock → فقط ادمین (این اپ دکمه ندارد ولی API موجود است) */
+    /**
+     * قفل اتاق
+     */
     @POST("chat/rooms/{id}/lock")
-    suspend fun lockRoom(@Path("id") roomId: Int): ApiResponse<Any?>
+    suspend fun lockRoom(
+        @Path("id") roomId: Int
+    ): ApiResponse<Any?>
 
-    /** POST chat/rooms/{id}/unlock */
+    /**
+     * باز کردن قفل اتاق
+     */
     @POST("chat/rooms/{id}/unlock")
-    suspend fun unlockRoom(@Path("id") roomId: Int): ApiResponse<Any?>
+    suspend fun unlockRoom(
+        @Path("id") roomId: Int
+    ): ApiResponse<Any?>
 }
 
-/** پاکت data.message برای ارسال پیام */
 data class MessageWrapperDto(
     val message: ChatMessageDto? = null
 )

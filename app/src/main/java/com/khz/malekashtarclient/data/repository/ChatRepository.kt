@@ -1,6 +1,7 @@
 package com.khz.malekashtarclient.data.repository
 
 import com.khz.malekashtarclient.core.network.ApiErrorHandler
+import com.khz.malekashtarclient.core.network.ApiResponse
 import com.khz.malekashtarclient.core.network.NetworkResult
 import com.khz.malekashtarclient.core.util.Constants
 import com.khz.malekashtarclient.data.dto.request.MarkAsReadRequest
@@ -10,106 +11,237 @@ import com.khz.malekashtarclient.data.remote.ChatApi
 import com.khz.malekashtarclient.domain.model.ChatMessage
 import com.khz.malekashtarclient.domain.model.ChatRoom
 
-/**
- * ریپازیتوری چت
- *
- * نکته‌ها:
- *  - room_type را کلاینت نمی‌فرستد — سرور از روی نقش دو کاربر استنتاج می‌کند
- *  - همه‌ی متدها در try/catch با خروجی NetworkResult
- *  - متد sendMessage همیشه flag sending را در finally آزاد می‌کند (در سطح UI)
- */
 class ChatRepository(
     private val api: ChatApi
 ) {
 
-    /** لیست اتاق‌های بازیکن (دو نفره + گروهی) */
+    /**
+     * دریافت لیست اتاق‌های گفتگو
+     */
     suspend fun rooms(): NetworkResult<List<ChatRoom>> {
         return try {
             val response = api.rooms()
-            if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در دریافت گفتگوها")
+
+            if (response.success) {
+                NetworkResult.Success(response.data?.rooms?.map { it.toDomain() }
+                        ?: emptyList())
             } else {
-                val list = response.data?.rooms?.mapNotNull { it.toDomain() }
-                    ?: emptyList()
-                NetworkResult.Success(list)
+                NetworkResult.Error(
+                    message = response.message
+                            ?: "دریافت اتاق‌های گفتگو ناموفق بود."
+                )
             }
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                message = ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 
     /**
-     * ساخت/دریافت اتاق دو نفره با یک کاربر (idempotent)
-     *
-     * سرور از روی نقش دو کاربر خودش room_type را تعیین می‌کند.
-     *
-     * @param targetUserId شناسه‌ی کاربر مقصد
-     * @return ChatRoom پر شده (با target_user_name و ...)
+     * دریافت اتاق خصوصی موجود
+     * یا ایجاد آن در صورت عدم وجود
      */
-    suspend fun getOrCreatePrivateRoom(targetUserId: Int): NetworkResult<ChatRoom> {
+    suspend fun getOrCreatePrivateRoom(
+        targetUserId: Int
+    ): NetworkResult<ChatRoom> {
         return try {
-            val response = api.createOrGetPrivateRoom(mapOf("target_user_id" to targetUserId))
-            if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در ایجاد گفتگو")
-            } else {
-                val room = response.data?.room?.toDomain()
-                    ?: return NetworkResult.Error("پاسخ سرور نامعتبر است")
-                NetworkResult.Success(room)
-            }
-        } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
-        }
-    }
 
-    /** دریافت پیام‌های یک اتاق (پیش‌فرض: ۵۰ پیام آخر) */
-    suspend fun getMessages(roomId: Int, limit: Int = 50): NetworkResult<List<ChatMessage>> {
-        return try {
-            val response = api.messages(roomId, limit)
-            if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در دریافت پیام‌ها")
-            } else {
-                val list = response.data?.messages?.mapNotNull { it.toDomain() }
-                    ?: emptyList()
-                NetworkResult.Success(list)
-            }
-        } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
-        }
-    }
-
-    /** ارسال پیام متنی */
-    suspend fun sendMessage(roomId: Int, body: String): NetworkResult<ChatMessage> {
-        return try {
-            if (body.isBlank()) {
-                return NetworkResult.Error("پیام نمی‌تواند خالی باشد")
-            }
-            val response = api.sendMessage(
-                roomId,
-                SendMessageRequest(messageType = Constants.MESSAGE_TYPE_TEXT, body = body.trim())
+            val response = api.createOrGetPrivateRoom(
+                body = mapOf(
+                    "target_user_id" to targetUserId
+                )
             )
-            if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در ارسال پیام")
+
+            if (response.success) {
+
+                val room = response.data?.room
+
+                if (room != null) {
+                    NetworkResult.Success(
+                        room.toDomain()
+                    )
+                } else {
+                    NetworkResult.Error(
+                        message = "اطلاعات اتاق گفتگو دریافت نشد."
+                    )
+                }
+
             } else {
-                val msg = response.data?.message?.toDomain()
-                    ?: return NetworkResult.Error("پاسخ سرور نامعتبر است")
-                NetworkResult.Success(msg)
+                NetworkResult.Error(
+                    message = response.message
+                            ?: "ایجاد اتاق گفتگو ناموفق بود."
+                )
             }
+
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                message = ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 
-    /** ثبت خوانده‌شدن پیام‌ها تا یک پیام مشخص */
-    suspend fun markAsRead(roomId: Int, lastReadMessageId: Int): NetworkResult<Unit> {
+    /**
+     * دریافت پیام‌های یک اتاق
+     */
+    suspend fun getMessages(
+        roomId: Int,
+        limit: Int = 50
+    ): NetworkResult<List<ChatMessage>> {
         return try {
-            val response = api.markAsRead(roomId, MarkAsReadRequest(lastReadMessageId))
-            if (!response.success) {
-                NetworkResult.Error(response.message ?: "خطا در ثبت خواندن")
+
+            val response = api.messages(
+                roomId = roomId,
+                limit = limit
+            )
+
+            if (response.success) {
+
+                NetworkResult.Success(response.data?.messages?.map { it.toDomain() }
+                        ?: emptyList())
+
             } else {
-                NetworkResult.Success(Unit)
+                NetworkResult.Error(
+                    message = response.message
+                            ?: "دریافت پیام‌ها ناموفق بود."
+                )
             }
+
         } catch (e: Exception) {
-            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+            NetworkResult.Error(
+                message = ApiErrorHandler.extractMessage(e)
+            )
+        }
+    }
+
+    /**
+     * ارسال پیام متنی
+     */
+    suspend fun sendMessage(
+        roomId: Int,
+        body: String
+    ): NetworkResult<ChatMessage> {
+        return try {
+
+            val request = SendMessageRequest(
+                messageType = Constants.MESSAGE_TYPE_TEXT,
+                body = body
+            )
+
+            val response = api.sendMessage(
+                roomId = roomId,
+                body = request
+            )
+
+            if (response.success) {
+
+                val message = response.data?.message
+
+                if (message != null) {
+                    NetworkResult.Success(
+                        message.toDomain()
+                    )
+                } else {
+                    NetworkResult.Error(
+                        message = "اطلاعات پیام ارسال‌شده دریافت نشد."
+                    )
+                }
+
+            } else {
+                NetworkResult.Error(
+                    message = response.message
+                            ?: "ارسال پیام ناموفق بود."
+                )
+            }
+
+        } catch (e: Exception) {
+            NetworkResult.Error(
+                message = ApiErrorHandler.extractMessage(e)
+            )
+        }
+    }
+
+    /**
+     * علامت‌گذاری پیام‌ها به عنوان خوانده‌شده
+     */
+    suspend fun markAsRead(
+        roomId: Int,
+        lastReadMessageId: Int
+    ): NetworkResult<Unit> {
+        return try {
+
+            val response = api.markAsRead(
+                roomId = roomId,
+                body = MarkAsReadRequest(
+                    lastReadMessageId = lastReadMessageId
+                )
+            )
+
+            if (response.success) {
+                NetworkResult.Success(Unit)
+            } else {
+                NetworkResult.Error(
+                    message = response.message
+                            ?: "علامت‌گذاری پیام به عنوان خوانده‌شده ناموفق بود."
+                )
+            }
+
+        } catch (e: Exception) {
+            NetworkResult.Error(
+                message = ApiErrorHandler.extractMessage(e)
+            )
+        }
+    }
+
+    /**
+     * قفل کردن اتاق گفتگو
+     */
+    suspend fun lockRoom(
+        roomId: Int
+    ): NetworkResult<Unit> {
+        return try {
+
+            val response = api.lockRoom(roomId)
+
+            if (response.success) {
+                NetworkResult.Success(Unit)
+            } else {
+                NetworkResult.Error(
+                    message = response.message
+                            ?: "قفل کردن اتاق گفتگو ناموفق بود."
+                )
+            }
+
+        } catch (e: Exception) {
+            NetworkResult.Error(
+                message = ApiErrorHandler.extractMessage(e)
+            )
+        }
+    }
+
+    /**
+     * باز کردن قفل اتاق گفتگو
+     */
+    suspend fun unlockRoom(
+        roomId: Int
+    ): NetworkResult<Unit> {
+        return try {
+
+            val response = api.unlockRoom(roomId)
+
+            if (response.success) {
+                NetworkResult.Success(Unit)
+            } else {
+                NetworkResult.Error(
+                    message = response.message
+                            ?: "باز کردن قفل اتاق گفتگو ناموفق بود."
+                )
+            }
+
+        } catch (e: Exception) {
+            NetworkResult.Error(
+                message = ApiErrorHandler.extractMessage(e)
+            )
         }
     }
 }

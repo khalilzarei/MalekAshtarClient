@@ -1,3 +1,4 @@
+
 package com.khz.malekashtarclient.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
@@ -23,12 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * صفحه‌ی لیستی عمومی با ۳ حالت (Loading / Success / Error)
- *
- * امضای تغییرناپذیر طبق پرامپت:
- *   - onItemClick داخل itemContent با Modifier.clickable
- *   - دکمه‌ی onAdd فقط اگر != null باشد، FAB نمایش داده می‌شود
- *   - همیشه روی GlassBackground سوار می‌شود
+ * صفحه‌ی لیستی عمومی با ۳ حالت:
+ * Loading / Success / Error
  */
 @Composable
 fun <T> GenericListScreen(
@@ -39,15 +36,27 @@ fun <T> GenericListScreen(
     onAdd: (() -> Unit)? = null,
     itemContent: @Composable (T) -> Unit
 ) {
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
         when (state) {
-            is ListState.Loading -> LoadingContent()
-            is ListState.Error -> ErrorContent(
-                message = state.message,
-                onRetry = onRefresh
-            )
+
+            is ListState.Loading -> {
+                LoadingContent()
+            }
+
+            is ListState.Error -> {
+                ErrorContent(
+                    message = state.message,
+                    onRetry = onRefresh
+                )
+            }
+
             is ListState.Success -> {
+
                 if (state.items.isEmpty()) {
+
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -61,37 +70,49 @@ fun <T> GenericListScreen(
                             textAlign = TextAlign.Center
                         )
                     }
+
                 } else {
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = 64.dp), // جا برای TopBar
+                            .padding(top = 64.dp),
                         contentPadding = PaddingValues(
                             horizontal = 16.dp,
                             vertical = 12.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(state.items, key = { item -> itemKey(item) }) { item ->
+
+                        items(
+                            items = state.items,
+                            key = { item ->
+                                itemKey(item)
+                            }
+                        ) { item ->
                             itemContent(item)
                         }
+
                         item {
-                            Spacer(Modifier.height(80.dp)) // فضای پایین FAB
+                            Spacer(
+                                modifier = Modifier.height(80.dp)
+                            )
                         }
                     }
                 }
             }
         }
 
-        // Top Bar
         GlassTopBar(
             title = title,
             onBack = onBack,
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
-        // دکمه‌ی افزودن
-        if (onAdd != null && state is ListState.Success) {
+        if (
+                onAdd != null &&
+                state is ListState.Success
+        ) {
             FloatingActionButton(
                 onClick = onAdd,
                 containerColor = com.khz.malekashtarclient.ui.theme.GoldPrimary,
@@ -100,22 +121,40 @@ fun <T> GenericListScreen(
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "افزودن")
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "افزودن"
+                )
             }
         }
     }
 }
 
-/** استخراج کلید یکتا از آیتم برای LazyColumn (پیش‌فرض: hashCode) */
-@Suppress("UNCHECKED_CAST")
-private fun <T> itemKey(item: T): Any = when (item) {
-    is com.khz.malekashtarclient.domain.model.ChatRoom -> item.id
-    is com.khz.malekashtarclient.domain.model.ChatContact -> item.userId
-    is com.khz.malekashtarclient.domain.model.NewsItem -> item.id
-    is com.khz.malekashtarclient.domain.model.MyClass -> item.id
-    is com.khz.malekashtarclient.domain.model.MyInvoice -> item.id
-    is com.khz.malekashtarclient.domain.model.MyMatch -> item.id
-    is com.khz.malekashtarclient.domain.model.MyScheduleItem -> item.id
-    is com.khz.malekashtarclient.domain.model.MyChild -> item.id
-    else -> item.hashCode()
+private fun <T> itemKey(item: T): Any {
+    return when (item) {
+
+        is com.khz.malekashtarclient.domain.model.ChatRoom ->
+            item.id
+
+        is com.khz.malekashtarclient.domain.model.NewsItem ->
+            item.id
+
+        is com.khz.malekashtarclient.domain.model.MyClass ->
+            item.id
+
+        is com.khz.malekashtarclient.domain.model.MyInvoice ->
+            item.id
+
+        is com.khz.malekashtarclient.domain.model.MyMatch ->
+            item.id
+
+        is com.khz.malekashtarclient.domain.model.MyScheduleItem ->
+            item.id
+
+        is com.khz.malekashtarclient.domain.model.MyChild ->
+            item.id
+
+        else ->
+            item.hashCode()
+    }
 }
