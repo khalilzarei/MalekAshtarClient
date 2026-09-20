@@ -90,7 +90,12 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
 
     var currentRoomId by remember { mutableStateOf(roomId) }
-    var roomTitle by remember { mutableStateOf(initialTitle ?: "گفتگو") }
+    var roomTitle by remember {
+        mutableStateOf(
+            initialTitle
+                    ?: "گفتگو"
+        )
+    }
     var isGroup by remember { mutableStateOf(false) }
     var isLocked by remember { mutableStateOf(false) }
     var memberCount by remember { mutableStateOf(0) }
@@ -105,32 +110,52 @@ fun ChatScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // ─── بارگذاری اولیه: ساخت/دریافت room (اگر لازم) + loadMessages ───
-    LaunchedEffect(targetUserId, roomId) {
+    LaunchedEffect(
+        targetUserId,
+        roomId
+    ) {
         loading = true
         error = null
-        currentUserId = sessionManager.userId.first()?.toIntOrNull()
+        currentUserId = sessionManager.userId.first()
+            ?.toIntOrNull()
 
         if (currentRoomId == null && targetUserId != null) {
             when (val r = chatRepo.getOrCreatePrivateRoom(targetUserId)) {
                 is NetworkResult.Success -> {
                     val room = r.data
                     currentRoomId = room.id
-                    roomTitle = room.targetUserName ?: roomTitle
+                    // برای age_group: targetUserName = null و targetUserName در سرور = ageGroupTitle
+                    // برای دو نفره: targetUserName = نام طرف
+                    roomTitle = when {
+                        room.isGroup -> room.ageGroupTitle
+                                ?: room.targetUserName
+                                ?: roomTitle
+
+                        else         -> room.targetUserName
+                                ?: roomTitle
+                    }
                     isGroup = room.isGroup
                     isLocked = room.isLocked
                     memberCount = room.memberCount
                 }
-                is NetworkResult.Error -> {
+
+                is NetworkResult.Error   -> {
                     error = r.message
                     loading = false
                     return@LaunchedEffect
                 }
-                else -> Unit
+
+                else                     -> Unit
             }
         }
 
         // بارگذاری اولین سری پیام‌ها
-        currentRoomId?.let { loadMessages(chatRepo, it) { msgs -> messages = msgs } }
+        currentRoomId?.let {
+            loadMessages(
+                chatRepo,
+                it
+            ) { msgs -> messages = msgs }
+        }
         loading = false
     }
 
@@ -140,7 +165,12 @@ fun ChatScreen(
             if (event == Lifecycle.Event.ON_START) {
                 scope.launch {
                     while (true) {
-                        currentRoomId?.let { loadMessages(chatRepo, it) { msgs -> messages = msgs } }
+                        currentRoomId?.let {
+                            loadMessages(
+                                chatRepo,
+                                it
+                            ) { msgs -> messages = msgs }
+                        }
                         delay(5_000)
                     }
                 }
@@ -159,23 +189,32 @@ fun ChatScreen(
 
     // ─── ارسال پیام ───
     fun onSend() {
-        val rid = currentRoomId ?: return
+        val rid = currentRoomId
+                ?: return
         val text = messageText.trim()
         if (text.isEmpty() || sending) return
 
         scope.launch {
             sending = true
             try {
-                when (val r = chatRepo.sendMessage(rid, text)) {
+                when (val r = chatRepo.sendMessage(
+                    rid,
+                    text
+                )) {
                     is NetworkResult.Success -> {
                         messageText = ""
-                        loadMessages(chatRepo, rid) { msgs -> messages = msgs }
+                        loadMessages(
+                            chatRepo,
+                            rid
+                        ) { msgs -> messages = msgs }
                     }
-                    is NetworkResult.Error -> {
+
+                    is NetworkResult.Error   -> {
                         error = r.message
                         if (r.message.contains("قفل")) isLocked = true
                     }
-                    else -> Unit
+
+                    else                     -> Unit
                 }
             } finally {
                 sending = false
@@ -183,7 +222,11 @@ fun ChatScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().imePadding()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding()
+    ) {
         GlassTopBar(
             title = if (isGroup) "$roomTitle (${memberCount.toPersianDigits()} عضو)" else roomTitle,
             onBack = onBack
@@ -191,12 +234,17 @@ fun ChatScreen(
 
         Box(Modifier.weight(1f)) {
             when {
-                loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                loading -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator(color = GoldPrimary)
                 }
 
                 error != null && messages.isEmpty() -> Column(
-                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -209,12 +257,25 @@ fun ChatScreen(
                     TextButton(onClick = {
                         scope.launch {
                             error = null
-                            currentRoomId?.let { loadMessages(chatRepo, it) { msgs -> messages = msgs } }
+                            currentRoomId?.let {
+                                loadMessages(
+                                    chatRepo,
+                                    it
+                                ) { msgs -> messages = msgs }
+                            }
                         }
-                    }) { Text("تلاش مجدد", color = GoldPrimary) }
+                    }) {
+                        Text(
+                            "تلاش مجدد",
+                            color = GoldPrimary
+                        )
+                    }
                 }
 
-                messages.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                messages.isEmpty() -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             "هنوز پیامی رد و بدل نشده",
@@ -259,8 +320,7 @@ fun ChatScreen(
                     text = messageText,
                     onTextChange = { messageText = it },
                     sending = sending,
-                    onSend = { onSend() }
-                )
+                    onSend = { onSend() })
             }
         }
     }
@@ -272,15 +332,23 @@ private suspend fun loadMessages(
     roomId: Int,
     onLoaded: (List<ChatMessage>) -> Unit
 ) {
-    when (val r = chatRepo.getMessages(roomId, limit = 50)) {
+    when (val r = chatRepo.getMessages(
+        roomId,
+        limit = 50
+    )) {
         is NetworkResult.Success -> {
             onLoaded(r.data)
-            r.data.maxOfOrNull { it.id }?.let { lastId ->
-                chatRepo.markAsRead(roomId, lastId)
-            }
+            r.data.maxOfOrNull { it.id }
+                ?.let { lastId ->
+                    chatRepo.markAsRead(
+                        roomId,
+                        lastId
+                    )
+                }
         }
-        is NetworkResult.Error -> Unit
-        else -> Unit
+
+        is NetworkResult.Error   -> Unit
+        else                     -> Unit
     }
 }
 
@@ -309,23 +377,42 @@ private fun MessageBubble(
                     text = message.senderName,
                     color = Color(0xFF4FC3F7),
                     style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                    modifier = Modifier.padding(
+                        start = 4.dp,
+                        bottom = 2.dp
+                    )
                 )
             }
 
             val shape = if (isMine) {
-                RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 4.dp, bottomEnd = 18.dp)
+                RoundedCornerShape(
+                    topStart = 18.dp,
+                    topEnd = 18.dp,
+                    bottomStart = 4.dp,
+                    bottomEnd = 18.dp
+                )
             } else {
-                RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 4.dp)
+                RoundedCornerShape(
+                    topStart = 18.dp,
+                    topEnd = 18.dp,
+                    bottomStart = 18.dp,
+                    bottomEnd = 4.dp
+                )
             }
 
             val bgBrush = if (isMine) {
                 Brush.linearGradient(
-                    listOf(GoldPrimary.copy(0.85f), GoldPrimary.copy(0.55f))
+                    listOf(
+                        GoldPrimary.copy(0.85f),
+                        GoldPrimary.copy(0.55f)
+                    )
                 )
             } else {
                 Brush.linearGradient(
-                    listOf(Color.White.copy(0.15f), Color.White.copy(0.08f))
+                    listOf(
+                        Color.White.copy(0.15f),
+                        Color.White.copy(0.08f)
+                    )
                 )
             }
 
@@ -334,7 +421,10 @@ private fun MessageBubble(
                     .widthIn(max = 280.dp)
                     .clip(shape)
                     .background(bgBrush)
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .padding(
+                        horizontal = 14.dp,
+                        vertical = 10.dp
+                    )
             ) {
                 Text(
                     text = message.body,
@@ -345,7 +435,9 @@ private fun MessageBubble(
 
             Spacer(Modifier.height(2.dp))
             Text(
-                text = message.createdAt?.takeLast(8)?.take(5) ?: "",
+                text = message.createdAt?.takeLast(8)
+                    ?.take(5)
+                        ?: "",
                 color = Color.White.copy(0.4f),
                 style = MaterialTheme.typography.labelSmall
             )
@@ -353,7 +445,11 @@ private fun MessageBubble(
 
         if (isMine) {
             Spacer(Modifier.width(6.dp))
-            AvatarView(name = null, size = 32.dp, accentColor = GoldPrimary)
+            AvatarView(
+                name = null,
+                size = 32.dp,
+                accentColor = GoldPrimary
+            )
         }
     }
 }
@@ -384,7 +480,10 @@ private fun MessageInputBar(
                         .weight(1f)
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color.White.copy(alpha = 0.08f))
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .padding(
+                            horizontal = 16.dp,
+                            vertical = 10.dp
+                        )
                 ) {
                     if (text.isEmpty()) {
                         Text(
@@ -437,7 +536,10 @@ private fun MessageInputBar(
                             tint = if (text.isNotBlank()) GoldOn else Color.White.copy(0.4f),
                             modifier = Modifier
                                 .size(20.dp)
-                                .graphicsLayer(scaleX = -1f, scaleY = 1f)
+                                .graphicsLayer(
+                                    scaleX = -1f,
+                                    scaleY = 1f
+                                )
                         )
                     }
                 }
@@ -459,7 +561,10 @@ private fun LockedBar() {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "🔒", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "🔒",
+                style = MaterialTheme.typography.titleMedium
+            )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = "چت توسط مدیر قفل شده است",

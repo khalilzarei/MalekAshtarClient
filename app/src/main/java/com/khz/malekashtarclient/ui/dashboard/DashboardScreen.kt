@@ -1,5 +1,6 @@
 package com.khz.malekashtarclient.ui.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -74,14 +76,17 @@ fun DashboardScreen(
 
     GlassBackground {
         Box(Modifier.fillMaxSize()) {
-            GlassTopBar(title = "خانه", onBack = null)
+            GlassTopBar(
+                title = "خانه",
+                onBack = null
+            )
 
             when {
                 state.loading -> LoadingContent()
                 state.error != null -> ErrorContent(
                     message = state.error!!,
-                    onRetry = { viewModel.refresh() }
-                )
+                    onRetry = { viewModel.refresh() })
+
                 else -> LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -95,10 +100,14 @@ fun DashboardScreen(
                     // کارت بازیکن
                     item {
                         PlayerCard(
-                            playerName = state.child?.fullName ?: state.user?.fullName ?: "بازیکن",
-                            avatarUrl = state.child?.avatarUrl ?: state.user?.avatarUrl,
+                            playerName = state.child?.fullName
+                                    ?: state.user?.fullName
+                                    ?: "بازیکن",
+                            avatarUrl = state.child?.avatarUrl
+                                    ?: state.user?.avatarUrl,
                             className = state.child?.currentClass?.title,
-                            debt = state.child?.balance?.debt ?: 0L
+                            debt = state.child?.balance?.debt
+                                    ?: 0L
                         )
                     }
 
@@ -107,19 +116,28 @@ fun DashboardScreen(
                         item {
                             SectionTitle("جلسات پیش‌رو")
                         }
-                        items(state.upcoming, key = { it.id }) { s ->
-                            SessionCard(s)
+                        items(
+                            state.upcoming,
+                            key = { it.id }) { s ->
+                            SessionCard(s) {
+                                // کلیک: به صفحه‌ی کلاس‌ها (که شامل جزئیات جلسات است) هدایت می‌شود
+                                onNavigateToClasses()
+                            }
                         }
                     }
 
                     // اخبار اخیر
                     if (state.recentNews.isNotEmpty()) {
                         item { SectionTitle("آخرین اخبار") }
-                        items(state.recentNews, key = { it.id }) { n ->
+                        items(
+                            state.recentNews,
+                            key = { it.id }) { n ->
                             DashboardNewsCard(
                                 title = n.title,
                                 dateText = DateUtils.toJalaliReadable(n.displayDate?.take(10))
-                            )
+                            ) {
+                                onNavigateToNews()
+                            }
                         }
                     }
 
@@ -168,32 +186,30 @@ private fun PlayerCard(
 ) {
     GlassCard3D {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AvatarView(
                 name = playerName,
                 avatarUrl = avatarUrl,
-                size = 56.dp,
+                size = 64.dp,
                 accentColor = GoldPrimary
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = playerName.toPersianDigits(),
                     color = Color.White,
-                    style = MaterialTheme.typography.titleMedium.copy(
+                    style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold
                     )
                 )
                 if (!className.isNullOrBlank()) {
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = className,
                         color = Color.White.copy(alpha = 0.7f),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
@@ -202,12 +218,15 @@ private fun PlayerCard(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .background(RedError.copy(alpha = 0.85f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .padding(
+                            horizontal = 12.dp,
+                            vertical = 8.dp
+                        )
                 ) {
                     Text(
                         text = "بدهی: ${debt.toPersianDigits()} ت",
                         color = Color.White,
-                        style = MaterialTheme.typography.labelSmall.copy(
+                        style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = FontWeight.Bold
                         )
                     )
@@ -222,47 +241,53 @@ private fun SectionTitle(text: String) {
     Text(
         text = text,
         color = GoldPrimary,
-        style = MaterialTheme.typography.titleSmall.copy(
+        style = MaterialTheme.typography.titleMedium.copy(
             fontWeight = FontWeight.Bold
         ),
-        modifier = Modifier.padding(top = 8.dp, start = 4.dp)
+        modifier = Modifier.padding(
+            top = 10.dp,
+            start = 4.dp
+        )
     )
 }
 
 @Composable
-private fun SessionCard(s: MyScheduleItem) {
-    GlassCard3D {
+private fun SessionCard(
+    s: MyScheduleItem,
+    onClick: () -> Unit
+) {
+    GlassCard3D(onClick = onClick) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Default.Schedule,
                 contentDescription = null,
                 tint = GoldPrimary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp)
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = s.classTitle,
                     color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.SemiBold
                     )
                 )
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = DateUtils.toJalaliReadable(s.sessionDate),
                     color = Color.White.copy(alpha = 0.7f),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
             Text(
-                text = s.startTime.take(5).toPersianDigits(),
+                text = s.startTime.take(5)
+                    .toPersianDigits(),
                 color = GoldPrimary,
-                style = MaterialTheme.typography.titleSmall.copy(
+                style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold
                 )
             )
@@ -271,23 +296,27 @@ private fun SessionCard(s: MyScheduleItem) {
 }
 
 @Composable
-private fun DashboardNewsCard(title: String, dateText: String) {
-    GlassCard3D {
-        Column(modifier = Modifier.padding(14.dp)) {
+private fun DashboardNewsCard(
+    title: String,
+    dateText: String,
+    onClick: () -> Unit
+) {
+    GlassCard3D(onClick = onClick) {
+        Column {
             Text(
                 text = title,
                 color = Color.White,
-                style = MaterialTheme.typography.bodyMedium.copy(
+                style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
                 maxLines = 2
             )
             if (dateText.isNotBlank()) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = dateText,
-                    color = Color.White.copy(alpha = 0.5f),
-                    style = MaterialTheme.typography.labelSmall
+                    color = Color.White.copy(alpha = 0.6f),
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
@@ -308,20 +337,56 @@ private fun QuickAccessGrid(
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            QuickTile(Icons.Default.Chat, "گفتگوها", unreadChats, onClick = onChats, modifier = Modifier.weight(1f))
-            QuickTile(Icons.Default.Notifications, "اخبار", badge = 0, onClick = onNews, modifier = Modifier.weight(1f))
+            QuickTile(
+                Icons.Default.Chat,
+                "گفتگوها",
+                unreadChats,
+                onClick = onChats,
+                modifier = Modifier.weight(1f)
+            )
+            QuickTile(
+                Icons.Default.Notifications,
+                "اخبار",
+                badge = 0,
+                onClick = onNews,
+                modifier = Modifier.weight(1f)
+            )
         }
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            QuickTile(Icons.Default.SportsSoccer, "کلاس‌ها", badge = 0, onClick = onClasses, modifier = Modifier.weight(1f))
-            QuickTile(Icons.Default.Star, "صورت حساب", badge = 0, onClick = onFinance, modifier = Modifier.weight(1f))
+            QuickTile(
+                Icons.Default.SportsSoccer,
+                "کلاس‌ها",
+                badge = 0,
+                onClick = onClasses,
+                modifier = Modifier.weight(1f)
+            )
+            QuickTile(
+                Icons.Default.Star,
+                "صورت حساب",
+                badge = 0,
+                onClick = onFinance,
+                modifier = Modifier.weight(1f)
+            )
         }
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            QuickTile(Icons.Default.CalendarMonth, "مسابقات", badge = 0, onClick = onMatches, modifier = Modifier.weight(1f))
-            QuickTile(Icons.Default.AccountCircle, "پروفایل", badge = 0, onClick = onProfile, modifier = Modifier.weight(1f))
+            QuickTile(
+                Icons.Default.CalendarMonth,
+                "مسابقات",
+                badge = 0,
+                onClick = onMatches,
+                modifier = Modifier.weight(1f)
+            )
+            QuickTile(
+                Icons.Default.AccountCircle,
+                "پروفایل",
+                badge = 0,
+                onClick = onProfile,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
@@ -334,11 +399,14 @@ private fun QuickTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    GlassCard3D(modifier = modifier.clickable(onClick = onClick)) {
+    GlassCard3D(
+        modifier = modifier,
+        onClick = onClick
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 18.dp),
+                .padding(vertical = 22.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             BadgedBox(badge = {
@@ -347,7 +415,7 @@ private fun QuickTile(
                         Text(
                             text = badge.toPersianDigits(),
                             color = Color.White,
-                            fontSize = 10.sp
+                            fontSize = 11.sp
                         )
                     }
                 }
@@ -356,14 +424,15 @@ private fun QuickTile(
                     icon,
                     contentDescription = label,
                     tint = GoldPrimary,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = label,
                 color = Color.White,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }

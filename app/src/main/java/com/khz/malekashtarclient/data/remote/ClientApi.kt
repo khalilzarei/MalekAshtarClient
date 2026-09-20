@@ -14,12 +14,7 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
 
-/**
- * Endpointهای me/* (مخصوص نقش بازیکن)
- *
- * سرور فقط endpointهایی را برمی‌گرداند که این نقش مجاز باشد.
- * هیچ endpoint ادمینی (players/users/...) در این اپ صدا زده نمی‌شود.
- */
+
 interface ClientApi {
 
     /** GET me/children → آرایه‌ی بازیکن(های) متصل به این حساب (معمولاً ۰ یا ۱) */

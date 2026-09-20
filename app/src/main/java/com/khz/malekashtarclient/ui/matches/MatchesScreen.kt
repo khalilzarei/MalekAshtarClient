@@ -1,6 +1,7 @@
 package com.khz.malekashtarclient.ui.matches
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -116,7 +117,12 @@ fun MatchesScreen(onBack: () -> Unit) {
                                 ),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(filtered, key = { it.id }) { m -> MatchCard(m) }
+                                items(filtered, key = { it.id }) { m ->
+                                    MatchCard(m) {
+                                        // در حال حاضر فقط ripple نشان می‌دهیم
+                                        // اگر بعداً نیاز به صفحه‌ی جزئیات باشد، اینجا پیاده می‌شود
+                                    }
+                                }
                                 item { Spacer(Modifier.height(40.dp)) }
                             }
                         }
@@ -148,9 +154,9 @@ private fun TabChip(text: String, selected: Boolean, onClick: () -> Unit, modifi
 }
 
 @Composable
-private fun MatchCard(m: MyMatch) {
-    GlassCard3D {
-        Column(modifier = Modifier.padding(14.dp)) {
+private fun MatchCard(m: MyMatch, onClick: () -> Unit) {
+    GlassCard3D(onClick = onClick) {
+        Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -159,7 +165,7 @@ private fun MatchCard(m: MyMatch) {
                 Text(
                     text = m.title?.toPersianDigits() ?: "مسابقه #${m.id.toPersianDigits()}",
                     color = Color.White,
-                    style = MaterialTheme.typography.titleSmall.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier.weight(1f)
@@ -168,81 +174,81 @@ private fun MatchCard(m: MyMatch) {
             }
 
             if (!m.opponentTeam.isNullOrBlank()) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = "حریف: ${m.opponentTeam}",
                     color = Color.White.copy(0.85f),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.CalendarMonth,
                     contentDescription = null,
                     tint = Color.White.copy(0.5f),
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = DateUtils.toJalaliReadable(m.matchDate),
-                    color = Color.White.copy(0.7f),
-                    style = MaterialTheme.typography.bodySmall
+                    color = Color.White.copy(0.85f),
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
                     text = m.matchTime.take(5).toPersianDigits(),
                     color = GoldPrimary,
-                    style = MaterialTheme.typography.bodySmall.copy(
+                    style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold
                     )
                 )
             }
 
             if (!m.location.isNullOrBlank()) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.LocationOn,
                         contentDescription = null,
                         tint = Color.White.copy(0.5f),
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(
                         text = m.location,
-                        color = Color.White.copy(0.7f),
-                        style = MaterialTheme.typography.bodySmall
+                        color = Color.White.copy(0.85f),
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
 
             if (!m.classTitle.isNullOrBlank() || !m.ageGroupTitle.isNullOrBlank()) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = listOfNotNull(m.classTitle, m.ageGroupTitle).joinToString(" - "),
-                    color = Color.White.copy(0.5f),
-                    style = MaterialTheme.typography.labelSmall
+                    color = Color.White.copy(0.6f),
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
 
             // نتیجه
             if (m.hasResult) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .background(GreenOnline.copy(alpha = 0.25f))
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "نتیجه: ${m.resultText}",
                         color = GreenOnline,
-                        style = MaterialTheme.typography.titleSmall.copy(
+                        style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         )
                     )

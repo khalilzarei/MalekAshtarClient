@@ -81,6 +81,12 @@ fun ClassesScreen(
                 ClassCard(
                     klass = klass,
                     openingChat = openingChat,
+                    onClick = {
+                        // کلیک روی کارت: پیش‌فرض گفتگو با مربی (اگر مربی دارد)
+                        if (!klass.coachName.isNullOrBlank()) {
+//                            onChatWithCoach()
+                        }
+                    },
                     onChatWithCoach = {
                         val uid = viewModel.findCoachUserId(klass.coachName)
                         if (uid == null) {
@@ -120,14 +126,15 @@ fun ClassesScreen(
 private fun ClassCard(
     klass: MyClass,
     openingChat: Boolean,
+    onClick: () -> Unit,
     onChatWithCoach: () -> Unit
 ) {
-    GlassCard3D {
-        Column(modifier = Modifier.padding(14.dp)) {
+    GlassCard3D(onClick = onClick) {
+        Column {
             Text(
                 text = klass.title,
                 color = Color.White,
-                style = MaterialTheme.typography.titleMedium.copy(
+                style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold
                 )
             )
@@ -137,41 +144,41 @@ private fun ClassCard(
                 Text(
                     text = klass.ageGroupTitle,
                     color = GoldPrimary,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.Schedule,
                     contentDescription = null,
                     tint = Color.White.copy(0.5f),
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = "${klass.enrolledCount?.toString()?.toPersianDigits() ?: "?"} / ${klass.capacity?.toString()?.toPersianDigits() ?: "?"} نفر",
                     color = Color.White.copy(0.7f),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
 
             if (!klass.location.isNullOrBlank()) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.LocationOn,
                         contentDescription = null,
                         tint = Color.White.copy(0.5f),
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(
                         text = klass.location,
                         color = Color.White.copy(0.7f),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
@@ -183,22 +190,22 @@ private fun ClassCard(
                     Text(
                         text = "${sched.weekdayLabel} ${sched.startTime} - ${sched.endTime}",
                         color = Color.White.copy(0.85f),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
 
             // مربی + دکمه‌ی گفتگو
             if (!klass.coachName.isNullOrBlank()) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
                 Text(
                     text = "مربی: ${klass.coachName}",
                     color = Color.White,
-                    style = MaterialTheme.typography.bodySmall.copy(
+                    style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.SemiBold
                     )
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(10.dp))
                 Box(modifier = Modifier.clickable(onClick = onChatWithCoach)) {
                     GlassButton(
                         text = if (openingChat) "در حال اتصال..." else "گفتگو با مربی",

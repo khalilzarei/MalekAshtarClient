@@ -31,9 +31,7 @@ import com.khz.malekashtarclient.ui.components.GlassTopBar
 import com.khz.malekashtarclient.ui.components.GenericListScreen
 import com.khz.malekashtarclient.ui.theme.GoldPrimary
 
-/**
- * صفحه‌ی لیست اخبار + دیالوگ متن کامل
- */
+
 @Composable
 fun NewsListScreen(onBack: () -> Unit) {
     val viewModel: NewsListViewModel = appViewModel()
@@ -126,5 +124,3 @@ private fun NewsDetailDialog(news: NewsItem, onDismiss: () -> Unit) {
     )
 }
 
-@Composable
-private fun NewsDetailDialog(news: NewsItem, onDismiss: () -> Unit) {

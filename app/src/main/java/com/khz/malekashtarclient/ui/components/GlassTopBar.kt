@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -34,8 +33,8 @@ import com.khz.malekashtarclient.ui.theme.PurpleBgDeep
 fun GlassTopBar(
     title: String,
     onBack: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
@@ -83,7 +82,9 @@ fun GlassTopBar(
         // اکشن‌ها (سمت چپ در RTL)
         Box(
             modifier = Modifier.align(Alignment.CenterEnd),
-            content = { actions() }
+            content = {
+//                actions()
+            },
         )
     }
 }

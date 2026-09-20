@@ -14,11 +14,6 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-/**
- * Endpointهای چت (chat/*)
- *
- * نکته: room_type را کلاینت نمی‌فرستد — سرور از روی نقش دو کاربر خودش استنتاج می‌کند.
- */
 interface ChatApi {
 
     /** GET chat/rooms → data.rooms[] */

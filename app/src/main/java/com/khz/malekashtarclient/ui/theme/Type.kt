@@ -2,36 +2,144 @@ package com.khz.malekashtarclient.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.khz.malekashtarclient.R
 
 /**
  * تایپوگرافی فارسی اپ
  *
- * فونت پیش‌فرض سیستم (SansSerif) برای متن فارسی مناسب است.
- * برای ارقام فارسی، از toPersianDigits استفاده می‌شود (در string format).
+ * فونت اصلی: وزیر (Vazirmatn) — فونت آزاد فارسی
+ * دانلود از: https://github.com/rastikerdar/vazirmatn
+ *
+ * فایل‌ها باید در res/font/ قرار داده شوند:
+ *  - vazirmatn_regular.ttf
+ *  - vazirmatn_medium.ttf
+ *  - vazirmatn_semibold.ttf
+ *  - vazirmatn_bold.ttf
+ *
+ * اندازه‌ها نسبت به نسخه‌ی قبلی بزرگ‌تر شده‌اند.
  */
-private val Base = TextStyle(fontFamily = FontFamily.SansSerif)
+
+val VazirmatnFont = FontFamily(
+    Font(
+        R.font.vazirmatn_regular,
+        FontWeight.Normal
+    ),
+    Font(
+        R.font.vazirmatn_medium,
+        FontWeight.Medium
+    ),
+    Font(
+        R.font.vazirmatn_bold,
+        FontWeight.Bold
+    ),
+    Font(
+        R.font.vazirmatn_black,
+        FontWeight.Black
+    )
+)
 
 val MalekAshtarTypography = Typography(
-    displayLarge = Base.copy(fontSize = 32.sp, fontWeight = FontWeight.Bold, lineHeight = 40.sp),
-    displayMedium = Base.copy(fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 36.sp),
-    displaySmall = Base.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp),
+    // سرفصل‌ها
+    displayLarge = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 36.sp,
+        lineHeight = 44.sp
+    ),
+    displayMedium = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 30.sp,
+        lineHeight = 38.sp
+    ),
+    displaySmall = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        lineHeight = 34.sp
+    ),
 
-    headlineLarge = Base.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 30.sp),
-    headlineMedium = Base.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold, lineHeight = 28.sp),
-    headlineSmall = Base.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp),
+    // عنوان‌ها
+    headlineLarge = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 24.sp,
+        lineHeight = 32.sp
+    ),
+    headlineMedium = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        lineHeight = 30.sp
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 20.sp,
+        lineHeight = 28.sp
+    ),
 
-    titleLarge = Base.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp),
-    titleMedium = Base.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp),
-    titleSmall = Base.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp),
+    // عنوان‌های متوسط
+    titleLarge = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 20.sp,
+        lineHeight = 28.sp
+    ),
+    titleMedium = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp,
+        lineHeight = 26.sp
+    ),
+    titleSmall = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        lineHeight = 24.sp
+    ),
 
-    bodyLarge = Base.copy(fontSize = 16.sp, fontWeight = FontWeight.Normal, lineHeight = 24.sp),
-    bodyMedium = Base.copy(fontSize = 14.sp, fontWeight = FontWeight.Normal, lineHeight = 22.sp),
-    bodySmall = Base.copy(fontSize = 12.sp, fontWeight = FontWeight.Normal, lineHeight = 18.sp),
+    // متون اصلی (بزرگ‌تر شده)
+    bodyLarge = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Normal,
+        fontSize = 17.sp,
+        lineHeight = 26.sp
+    ),
+    bodyMedium = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Normal,
+        fontSize = 15.sp,
+        lineHeight = 24.sp
+    ),
+    bodySmall = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Normal,
+        fontSize = 13.sp,
+        lineHeight = 20.sp
+    ),
 
-    labelLarge = Base.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp),
-    labelMedium = Base.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium, lineHeight = 16.sp),
-    labelSmall = Base.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium, lineHeight = 14.sp)
+    // لیبل‌ها
+    labelLarge = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 15.sp,
+        lineHeight = 22.sp
+    ),
+    labelMedium = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
+        lineHeight = 18.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = VazirmatnFont,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+        lineHeight = 16.sp
+    )
 )

@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +43,9 @@ import com.khz.malekashtarclient.ui.components.ErrorContent
 import com.khz.malekashtarclient.ui.components.GlassBackground
 import com.khz.malekashtarclient.ui.components.GlassCard3D
 import com.khz.malekashtarclient.ui.components.GlassTopBar
+import com.khz.malekashtarclient.ui.components.ListState
 import com.khz.malekashtarclient.ui.components.LoadingContent
+import com.khz.malekashtarclient.ui.theme.GoldOn
 import com.khz.malekashtarclient.ui.theme.GoldPrimary
 import com.khz.malekashtarclient.ui.theme.RedError
 
@@ -65,23 +66,25 @@ fun ChatRoomListScreen(
 
     GlassBackground {
         Box(Modifier.fillMaxSize()) {
-            GlassTopBar(title = "گفتگوها", onBack = onBack)
+            GlassTopBar(
+                title = "گفتگوها",
+                onBack = onBack
+            )
 
-            when (state) {
-                is com.khz.malekashtarclient.ui.components.ListState.Loading -> {
-                    LoadingContent()
-                }
-                is com.khz.malekashtarclient.ui.components.ListState.Error -> {
-                    ErrorContent(
-                        message = (state as com.khz.malekashtarclient.ui.components.ListState.Error).message,
-                        onRetry = { viewModel.refresh() }
-                    )
-                }
-                is com.khz.malekashtarclient.ui.components.ListState.Success -> {
-                    val rooms = (state as com.khz.malekashtarclient.ui.components.ListState.Success<ChatRoom>).items
+            when (val s = state) {
+                is ListState.Loading -> LoadingContent()
+                is ListState.Error -> ErrorContent(
+                    message = s.message,
+                    onRetry = { viewModel.refresh() })
+
+                is ListState.Success<*> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val rooms = s.items as List<ChatRoom>
                     if (rooms.isEmpty()) {
                         Box(
-                            modifier = Modifier.fillMaxSize().padding(top = 56.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 56.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -101,18 +104,26 @@ fun ChatRoomListScreen(
                             ),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(rooms, key = { it.id }) { room ->
+                            items(
+                                items = rooms,
+                                key = { room -> room.id }) { room ->
                                 RoomCard(
                                     room = room,
                                     onClick = {
+                                        // named arguments در داخل lambda برای function type مجاز نیست
+                                        val titleToShow = if (room.isGroup) {
+                                            room.ageGroupTitle
+                                                    ?: "گروه"
+                                        } else {
+                                            room.targetUserName
+                                        }
                                         onOpenRoom(
-                                            roomId = room.id,
-                                            userId = room.targetUserId,
-                                            title = if (room.isGroup) room.ageGroupTitle ?: "گروه" else room.targetUserName,
-                                            isGroup = room.isGroup
+                                            room.id,
+                                            room.targetUserId,
+                                            titleToShow,
+                                            room.isGroup
                                         )
-                                    }
-                                )
+                                    })
                             }
                             item { Spacer(Modifier.height(80.dp)) }
                         }
@@ -123,20 +134,28 @@ fun ChatRoomListScreen(
             FloatingActionButton(
                 onClick = onNewConversation,
                 containerColor = GoldPrimary,
-                contentColor = com.khz.malekashtarclient.ui.theme.GoldOn,
+                contentColor = GoldOn,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "گفتگوی جدید")
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "گفتگوی جدید"
+                )
             }
         }
     }
 }
 
 @Composable
-private fun RoomCard(room: ChatRoom, onClick: () -> Unit) {
-    val title = if (room.isGroup) room.ageGroupTitle ?: "گروه" else room.targetUserName ?: "گفتگو"
+private fun RoomCard(
+    room: ChatRoom,
+    onClick: () -> Unit
+) {
+    val title = if (room.isGroup) room.ageGroupTitle
+            ?: "گروه" else room.targetUserName
+            ?: "گفتگو"
 
     GlassCard3D(modifier = Modifier.clickable(onClick = onClick)) {
         Row(
@@ -199,7 +218,14 @@ private fun RoomCard(room: ChatRoom, onClick: () -> Unit) {
                 Spacer(Modifier.height(2.dp))
 
                 Text(
-                    text = room.lastMessage?.takeIf { it.isNotBlank() } ?: "پیامی ارسال نشده",
+                    text = buildString {
+                        room.lastMessageSenderName?.takeIf { it.isNotBlank() }
+                            ?.let {
+                                append("$it: ")
+                            }
+                        append(room.lastMessageBody?.takeIf { it.isNotBlank() }
+                                ?: "پیامی ارسال نشده")
+                    },
                     color = Color.White.copy(0.5f),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,

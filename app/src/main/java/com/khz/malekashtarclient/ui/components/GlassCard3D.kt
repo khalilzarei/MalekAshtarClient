@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,14 +20,16 @@ import com.khz.malekashtarclient.ui.theme.WhiteTransparent15
 /**
  * کارت شیشه‌ای ۳ بعدی — با حاشیه‌ی براق و ته‌رنگ بنفش
  *
- * امضای کلی:
- *   GlassCard3D(modifier, cornerRadius, onClick?) { ... محتوا ... }
+ * تغییرات:
+ *  - cornerRadius پیش‌فرض 20 → 24
+ *  - padding داخلی پیش‌فرض بزرگ‌تر (16 → 18)
  */
 @Composable
 fun GlassCard3D(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 20.dp,
+    cornerRadius: Dp = 24.dp,
     onClick: (() -> Unit)? = null,
+    contentPadding: Dp = 18.dp,
     content: @Composable () -> Unit
 ) {
     val shape = RoundedCornerShape(cornerRadius)
@@ -52,6 +55,10 @@ fun GlassCard3D(
         )
 
     Box(modifier = baseModifier) {
-        content()
+        Box(
+            modifier = Modifier.padding(contentPadding)
+        ) {
+            content()
+        }
     }
 }

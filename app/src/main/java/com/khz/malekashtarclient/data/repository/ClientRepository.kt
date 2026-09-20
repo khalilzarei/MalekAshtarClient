@@ -16,19 +16,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 
-/**
- * ریپازیتوری ClientApi (me/*)
- *
- * هیچ endpoint ادمینی صدا زده نمی‌شود — فقط me/*.
- *
- * الگوی هر متد:
- *  1. try/catch
- *  2. بررسی response.success (در غیر این صورت → Error)
- *  3. map کردن DTO → Domain با mapper اختصاصی
- *  4. بازگشت NetworkResult.Success(data)
- *
- * خطاها از ApiErrorHandler.extractMessage(e) می‌آیند.
- */
+
 class ClientRepository(
     private val api: ClientApi
 ) {

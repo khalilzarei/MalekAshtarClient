@@ -10,8 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +31,6 @@ import com.khz.malekashtarclient.domain.model.MyInvoice
 import com.khz.malekashtarclient.ui.components.GlassBackground
 import com.khz.malekashtarclient.ui.components.GlassCard3D
 import com.khz.malekashtarclient.ui.components.GlassTopBar
-import com.khz.malekashtarclient.ui.components.GenericListScreen
 import com.khz.malekashtarclient.ui.theme.GoldPrimary
 import com.khz.malekashtarclient.ui.theme.RedError
 
@@ -46,7 +44,10 @@ fun FinanceScreen(onBack: () -> Unit) {
 
     GlassBackground {
         Box(Modifier.fillMaxSize()) {
-            GlassTopBar(title = "صورت حساب", onBack = onBack)
+            GlassTopBar(
+                title = "صورت حساب",
+                onBack = onBack
+            )
 
             when (state) {
                 is com.khz.malekashtarclient.ui.components.ListState.Loading -> {
@@ -54,13 +55,15 @@ fun FinanceScreen(onBack: () -> Unit) {
                         modifier = Modifier.padding(top = 56.dp)
                     )
                 }
-                is com.khz.malekashtarclient.ui.components.ListState.Error -> {
+
+                is com.khz.malekashtarclient.ui.components.ListState.Error   -> {
                     com.khz.malekashtarclient.ui.components.ErrorContent(
                         message = (state as com.khz.malekashtarclient.ui.components.ListState.Error).message,
                         onRetry = { viewModel.refresh() },
                         modifier = Modifier.padding(top = 56.dp)
                     )
                 }
+
                 is com.khz.malekashtarclient.ui.components.ListState.Success -> {
                     val finances = (state as com.khz.malekashtarclient.ui.components.ListState.Success<MyFinance>).items
                     if (finances.isEmpty()) {
@@ -86,10 +89,12 @@ fun FinanceScreen(onBack: () -> Unit) {
                                     modifier = Modifier.padding(top = 8.dp)
                                 )
                             }
-                            androidx.compose.foundation.lazy.items(
+                            items(
                                 finance.invoices,
-                                key = { it.id }
-                            ) { inv -> InvoiceCard(inv) }
+                                key = { it.id },
+                            ) { inv ->
+                                InvoiceCard(inv)
+                            }
 
                             item { Spacer(Modifier.height(40.dp)) }
                         }
@@ -114,20 +119,44 @@ private fun FinanceSummaryCard(f: MyFinance) {
             Spacer(Modifier.height(12.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                SummaryItem("کل فاکتور", "${f.totalInvoiced.toPersianDigits()} ت", Modifier.weight(1f))
-                SummaryItem("پرداخت‌شده", "${f.totalPaid.toPersianDigits()} ت", Modifier.weight(1f), color = Color(0xFF81C784))
+                SummaryItem(
+                    "کل فاکتور",
+                    "${f.totalInvoiced.toPersianDigits()} ت",
+                    Modifier.weight(1f)
+                )
+                SummaryItem(
+                    "پرداخت‌شده",
+                    "${f.totalPaid.toPersianDigits()} ت",
+                    Modifier.weight(1f),
+                    color = Color(0xFF81C784)
+                )
             }
             Spacer(Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
-                SummaryItem("مانده", "${f.balance.toPersianDigits()} ت", Modifier.weight(1f), color = if (f.balance > 0) RedError else Color.White)
-                SummaryItem("در انتظار", "${f.pendingPayments.toPersianDigits()} مورد", Modifier.weight(1f), color = GoldPrimary)
+                SummaryItem(
+                    "مانده",
+                    "${f.balance.toPersianDigits()} ت",
+                    Modifier.weight(1f),
+                    color = if (f.balance > 0) RedError else Color.White
+                )
+                SummaryItem(
+                    "در انتظار",
+                    "${f.pendingPayments.toPersianDigits()} مورد",
+                    Modifier.weight(1f),
+                    color = GoldPrimary
+                )
             }
         }
     }
 }
 
 @Composable
-private fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier, color: Color = Color.White) {
+private fun SummaryItem(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.White
+) {
     Column(modifier = modifier) {
         Text(
             text = label,
@@ -154,7 +183,10 @@ private fun InvoiceCard(inv: MyInvoice) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "فاکتور #${inv.invoiceNumber?.toPersianDigits() ?: inv.id.toString().toPersianDigits()}",
+                    text = "فاکتور #${
+                        inv.invoiceNumber?.toPersianDigits() ?: inv.id.toString()
+                            .toPersianDigits()
+                    }",
                     color = Color.White,
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.Bold
@@ -184,16 +216,35 @@ private fun InvoiceCard(inv: MyInvoice) {
             Spacer(Modifier.height(8.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                AmountItem("مبلغ", "${inv.totalAmount.toPersianDigits()} ت", Modifier.weight(1f))
-                AmountItem("پرداخت‌شده", "${inv.paidAmount.toPersianDigits()} ت", Modifier.weight(1f), color = Color(0xFF81C784))
-                AmountItem("مانده", "${inv.remainingAmount.toPersianDigits()} ت", Modifier.weight(1f), color = if (inv.remainingAmount > 0) RedError else Color.White)
+                AmountItem(
+                    "مبلغ",
+                    "${inv.totalAmount.toPersianDigits()} ت",
+                    Modifier.weight(1f)
+                )
+                AmountItem(
+                    "پرداخت‌شده",
+                    "${inv.paidAmount.toPersianDigits()} ت",
+                    Modifier.weight(1f),
+                    color = Color(0xFF81C784)
+                )
+                AmountItem(
+                    "مانده",
+                    "${inv.remainingAmount.toPersianDigits()} ت",
+                    Modifier.weight(1f),
+                    color = if (inv.remainingAmount > 0) RedError else Color.White
+                )
             }
         }
     }
 }
 
 @Composable
-private fun AmountItem(label: String, value: String, modifier: Modifier = Modifier, color: Color = Color.White) {
+private fun AmountItem(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.White
+) {
     Column(modifier = modifier) {
         Text(
             text = label,
@@ -213,16 +264,20 @@ private fun AmountItem(label: String, value: String, modifier: Modifier = Modifi
 @Composable
 private fun StatusBadge(status: String?) {
     val (text, color) = when (status) {
-        "paid" -> "پرداخت‌شده" to Color(0xFF81C784)
+        "paid"    -> "پرداخت‌شده" to Color(0xFF81C784)
         "partial" -> "پرداخت جزئی" to GoldPrimary
-        "open" -> "پرداخت‌نشده" to RedError
-        else -> (status ?: "نامشخص") to Color.White.copy(0.6f)
+        "open"    -> "پرداخت‌نشده" to RedError
+        else      -> (status
+                ?: "نامشخص") to Color.White.copy(0.6f)
     }
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .background(color.copy(alpha = 0.25f))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .padding(
+                horizontal = 10.dp,
+                vertical = 4.dp
+            )
     ) {
         Text(
             text = text,

@@ -54,7 +54,10 @@ fun ChangePasswordScreen(
 
     Box(Modifier.fillMaxSize()) {
         if (onBack != null) {
-            GlassTopBar(title = "تغییر رمز عبور", onBack = onBack)
+            GlassTopBar(
+                title = "تغییر رمز عبور",
+                onBack = onBack
+            )
         }
 
         Box(

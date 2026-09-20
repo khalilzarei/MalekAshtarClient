@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,7 +66,10 @@ fun ProfileScreen(
 
     GlassBackground {
         Box(Modifier.fillMaxSize()) {
-            GlassTopBar(title = "پروفایل من", onBack = onBack)
+            GlassTopBar(
+                title = "پروفایل من",
+                onBack = onBack
+            )
 
             when {
                 state.loading -> LoadingContent()
