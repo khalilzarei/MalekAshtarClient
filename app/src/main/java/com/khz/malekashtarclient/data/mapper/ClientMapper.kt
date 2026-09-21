@@ -111,6 +111,34 @@ object ClientMapper {
        me / news
        ═══════════════════════════════════════ */
 
+    /**
+     * یک رسانه‌ی خبر.
+     * نوع فایل از file_type می‌آید و اگر سرور آن را نفرستد، از روی MIME
+     * استنتاج می‌شود.
+     */
+    fun MediaDto.toDomain(): NewsMedia? {
+        if (id <= 0) return null
+
+        val type = fileType
+                ?: mimeType?.substringBefore('/')
+
+        return NewsMedia(
+            id = id,
+            fileName = fileName,
+            originalName = originalName,
+            isVideo = type == "video",
+            mimeType = mimeType
+                    ?: "application/octet-stream",
+            sizeBytes = fileSize,
+            durationSeconds = durationSeconds,
+            downloadUrl = url,
+            streamUrl = streamUrl
+                    ?: url,
+            thumbnailUrl = thumbnailUrl,
+            description = description
+        )
+    }
+
     fun NewsDto.toDomain(): NewsItem? {
         val nid = id
                 ?: return null
@@ -122,7 +150,10 @@ object ClientMapper {
             body = body,
             publishedAt = publishedAt
                     ?: publishAt,
-            createdAt = createdAt)
+            createdAt = createdAt,
+            media = media?.mapNotNull { it.toDomain() }
+                    ?: emptyList()
+        )
     }
 
     /* ═══════════════════════════════════════

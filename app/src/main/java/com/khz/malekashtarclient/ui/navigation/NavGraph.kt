@@ -172,7 +172,9 @@ fun RootNavGraph() {
                         Screen.chatWithRoom(roomId)
                     )
                 },
-            )
+                onOpenContacts = {
+                    navController.navigate(Screen.ChatContacts.route)
+                })
         }
 
         // ─── Chat: Contacts ───
@@ -202,6 +204,12 @@ fun RootNavGraph() {
                 roomId = roomId,
                 targetUserId = userId,
                 initialTitle = title
+            )
+        }
+
+        composable(Screen.NewsList.route) {
+            NewsListScreen(
+                onBack = { navController.popBackStack() },
             )
         }
     }

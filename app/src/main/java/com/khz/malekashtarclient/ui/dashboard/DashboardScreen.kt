@@ -50,6 +50,7 @@ import com.khz.malekashtarclient.ui.components.GlassBackground
 import com.khz.malekashtarclient.ui.components.GlassCard3D
 import com.khz.malekashtarclient.ui.components.GlassTopBar
 import com.khz.malekashtarclient.ui.components.LoadingContent
+import com.khz.malekashtarclient.ui.news.NewsSlider
 import com.khz.malekashtarclient.ui.theme.GoldPrimary
 import com.khz.malekashtarclient.ui.theme.RedError
 
@@ -97,6 +98,17 @@ fun DashboardScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+
+                    // اخبار — عمداً اولین بخش محتوایی داشبورد است
+                    if (state.recentNews.isNotEmpty()) {
+                        item {
+                            NewsSlider(
+                                news = state.recentNews,
+                                onSeeAll = onNavigateToNews,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                     // کارت بازیکن
                     item {
                         PlayerCard(

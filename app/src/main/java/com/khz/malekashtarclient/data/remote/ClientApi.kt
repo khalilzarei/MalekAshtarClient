@@ -35,6 +35,13 @@ interface ClientApi {
     @GET("me/matches")
     suspend fun myMatches(): ApiResponse<MyMatchesWrapperDto>
 
+    /**
+     * GET me/chat-contacts
+     * مخاطبین قابل گفتگو (ادمین‌ها + مربیان کلاس‌های فرزندان)
+     */
+    @GET("me/chat-contacts")
+    suspend fun chatContacts(): ApiResponse<ChatContactsWrapperDto>
+
     /** POST me/avatar */
     @Multipart
     @POST("me/avatar")

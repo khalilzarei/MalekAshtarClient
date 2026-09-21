@@ -10,12 +10,10 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -100,13 +99,24 @@ fun ChatScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var currentUserId by remember { mutableStateOf<Int?>(null) }
 
-    val listState = rememberLazyListState()
-    val isKeyboardVisible = WindowInsets.isImeVisible
+    /* آواتار و نام کاربر جاری (برای پیام‌های خودی) */
+    var myAvatarUrl by remember { mutableStateOf<String?>(null) }
+    var myName by remember { mutableStateOf<String?>(null) }
 
-    /* ---------- شناسه کاربر جاری ---------- */
+    val listState = rememberLazyListState()
+
+    /* ---------- شناسه کاربر جاری + آواتار ---------- */
     LaunchedEffect(Unit) {
         currentUserId = sessionManager.userId.first()
             ?.toIntOrNull()
+
+        container.authRepository.me()
+            .let { result ->
+                if (result is NetworkResult.Success) {
+                    myAvatarUrl = result.data.avatarUrl
+                    myName = result.data.fullName
+                }
+            }
     }
 
     /* ---------- بارگذاری اتاق ---------- */
@@ -259,8 +269,9 @@ fun ChatScreen(
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(padding)
+                .fillMaxSize()
+                .imePadding()
         ) {
 
             /* ---------- هدر ---------- */
@@ -278,7 +289,7 @@ fun ChatScreen(
             ) {
                 when {
 
-                    loading -> LoadingState()
+                    loading                             -> LoadingState()
 
                     error != null && messages.isEmpty() -> ErrorState(
                         message = error
@@ -293,67 +304,108 @@ fun ChatScreen(
                             }
                         })
 
-                    messages.isEmpty() -> EmptyState()
+                    messages.isEmpty()                  -> EmptyState()
 
-                    else -> MessagesList(
+                    else                                -> MessagesList(
                         messages = messages,
                         listState = listState,
                         currentUserId = currentUserId,
-                        isGroup = currentRoom?.isGroup == true,
-                        bottomPadding = if (isKeyboardVisible) 4.dp else 8.dp
+                        myAvatarUrl = myAvatarUrl,
+                        myName = myName
                     )
                 }
             }
 
-            /* ---------- نوار ارسال ---------- */
-            if (currentRoomId != null) {
-                MessageInputBar(
-                    text = messageText,
-                    onTextChange = { messageText = it },
-                    sending = sending,
-                    onSend = {
-                        if (messageText.isBlank() || sending) return@MessageInputBar
+            /* ---------- نوار ارسال / وضعیت قفل ---------- */
+            when {
+                currentRoomId == null         -> Unit
 
-                        val rid = currentRoomId
-                                ?: return@MessageInputBar
-                        val text = messageText.trim()
-
-                        scope.launch {
-                            sending = true
-                            try {
-                                when (val result = chatRepo.sendMessage(
-                                    rid,
-                                    text
-                                )) {
-                                    is NetworkResult.Success -> {
-                                        messages = (messages + result.data).distinctBy { it.id }
-                                            .sortedBy { it.id }
-                                        messageText = ""
-                                    }
-
-                                    is NetworkResult.Error   -> {
-                                        Toast.makeText(
-                                            context,
-                                            result.message,
-                                            Toast.LENGTH_SHORT
-                                        )
-                                            .show()
-                                    }
-
-                                    is NetworkResult.Loading -> Unit
-                                }
-                            } catch (_: Exception) {
-                                Toast.makeText(
-                                    context,
-                                    "ارسال پیام ناموفق بود",
-                                    Toast.LENGTH_SHORT
-                                )
-                                    .show()
-                            } finally {
-                                sending = false
-                            }
+                /* گفتگوی قفل‌شده: ارسال فقط توسط ادمین ممکن است */
+                currentRoom?.isLocked == true -> {
+                    GlassCard3D(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                start = 12.dp,
+                                end = 12.dp,
+                                top = 8.dp,
+                                bottom = 10.dp
+                            )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = 16.dp,
+                                    vertical = 12.dp
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = "قفل",
+                                tint = Color(0xFFFF8A80),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = "این گفتگو توسط مدیر قفل شده است",
+                                color = Color.White.copy(alpha = 0.6f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
-                    })
+                    }
+                }
+
+                else                          -> {
+                    MessageInputBar(
+                        text = messageText,
+                        onTextChange = { messageText = it },
+                        sending = sending,
+                        onSend = {
+                            if (messageText.isBlank() || sending) return@MessageInputBar
+
+                            val rid = currentRoomId
+                                    ?: return@MessageInputBar
+                            val text = messageText.trim()
+
+                            scope.launch {
+                                sending = true
+                                try {
+                                    when (val result = chatRepo.sendMessage(
+                                        rid,
+                                        text
+                                    )) {
+                                        is NetworkResult.Success -> {
+                                            messages = (messages + result.data).distinctBy { it.id }
+                                                .sortedBy { it.id }
+                                            messageText = ""
+                                        }
+
+                                        is NetworkResult.Error   -> {
+                                            Toast.makeText(
+                                                context,
+                                                result.message,
+                                                Toast.LENGTH_SHORT
+                                            )
+                                                .show()
+                                        }
+
+                                        is NetworkResult.Loading -> Unit
+                                    }
+                                } catch (_: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        "ارسال پیام ناموفق بود",
+                                        Toast.LENGTH_SHORT
+                                    )
+                                        .show()
+                                } finally {
+                                    sending = false
+                                }
+                            }
+                        })
+                }
             }
         }
     }
@@ -369,17 +421,6 @@ fun ChatScreen(
         }
     }
 
-    /* ---------- اسکرول مجدد بعد از باز شدن کیبورد ---------- */
-    LaunchedEffect(isKeyboardVisible) {
-        if (isKeyboardVisible && messages.isNotEmpty()) {
-            delay(120)
-            try {
-                listState.scrollToItem(messages.lastIndex)
-            } catch (_: Exception) {
-                Unit
-            }
-        }
-    }
 }
 
 /* =========================================================
@@ -501,8 +542,8 @@ private fun MessagesList(
     messages: List<ChatMessage>,
     listState: androidx.compose.foundation.lazy.LazyListState,
     currentUserId: Int?,
-    isGroup: Boolean,
-    bottomPadding: androidx.compose.ui.unit.Dp
+    myAvatarUrl: String?,
+    myName: String?
 ) {
     LazyColumn(
         state = listState,
@@ -511,7 +552,7 @@ private fun MessagesList(
             start = 12.dp,
             end = 12.dp,
             top = 8.dp,
-            bottom = bottomPadding
+            bottom = 8.dp
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -521,18 +562,20 @@ private fun MessagesList(
             MessageBubble(
                 message = message,
                 isMine = message.senderId == currentUserId,
-                isGroup = isGroup
+                myAvatarUrl = myAvatarUrl,
+                myName = myName
             )
         }
     }
 }
 
-/* ---------- حباب پیام ---------- */
+/* ---------- حباب پیام (طراحی یکسان با اپ ادمین) ---------- */
 @Composable
 private fun MessageBubble(
     message: ChatMessage,
     isMine: Boolean,
-    isGroup: Boolean
+    myAvatarUrl: String?,
+    myName: String?
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -540,7 +583,7 @@ private fun MessageBubble(
         verticalAlignment = Alignment.Bottom
     ) {
 
-        if (!isMine) {
+        if (!isMine) {/* آواتار فرستنده (از payload پیام) */
             AvatarView(
                 name = message.senderName
                         ?: "?",
@@ -554,18 +597,6 @@ private fun MessageBubble(
         Column(
             horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
         ) {
-
-            if (isGroup && !isMine && !message.senderName.isNullOrBlank()) {
-                Text(
-                    text = message.senderName!!,
-                    color = Color(0xFF4FC3F7),
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(
-                        start = 4.dp,
-                        bottom = 2.dp
-                    )
-                )
-            }
 
             val shape = if (isMine) {
                 RoundedCornerShape(
@@ -638,27 +669,14 @@ private fun MessageBubble(
         if (isMine) {
             Spacer(Modifier.width(6.dp))
 
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(
-                                GoldPrimary,
-                                GoldPrimary.copy(alpha = 0.4f)
-                            )
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "م",
-                    color = GoldOn,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            /* آواتار کاربر جاری (حرف اول نام به‌عنوان fallback) */
+            AvatarView(
+                name = myName
+                        ?: "من",
+                avatarUrl = myAvatarUrl,
+                size = 32.dp,
+                accentColor = GoldPrimary
+            )
         }
     }
 }
@@ -674,7 +692,6 @@ private fun MessageInputBar(
     GlassCard3D(
         modifier = Modifier
             .fillMaxWidth()
-            .imePadding()
             .padding(
                 start = 12.dp,
                 end = 12.dp,

@@ -4,10 +4,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,8 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.khz.malekashtarclient.core.util.appViewModel
+import com.khz.malekashtarclient.domain.model.ChatContact
 import com.khz.malekashtarclient.ui.components.AvatarView
 import com.khz.malekashtarclient.ui.components.ErrorContent
 import com.khz.malekashtarclient.ui.components.GlassBackground
@@ -33,17 +37,19 @@ import com.khz.malekashtarclient.ui.components.LoadingContent
 import com.khz.malekashtarclient.ui.theme.GoldPrimary
 
 /**
- * انتخاب مربی برای شروع گفتگوی خصوصی.
+ * انتخاب مخاطب برای شروع گفتگوی جدید.
  *
  * منبع اطلاعات:
- *     GET /me/classes
+ *     GET /me/chat-contacts
  *
- * دیگر از ChatContact یا /me/chat-contacts استفاده نمی‌شود.
+ * مخاطبین: ادمین‌های فعال + مربیان کلاس‌های فرزندان.
+ * بازیکن با انتخاب هر مخاطب، گفتگوی خصوصی با او شروع می‌کند
+ * (اگر روم قبلاً نباشد، توسط سرور ساخته می‌شود).
  */
 @Composable
 fun ChatContactsScreen(
     onBack: () -> Unit,
-    onSelect: (coachUserId: Int) -> Unit
+    onSelect: (contactUserId: Int) -> Unit
 ) {
     val viewModel: ChatContactsViewModel = appViewModel()
     val state by viewModel.state.collectAsState()
@@ -55,7 +61,7 @@ fun ChatContactsScreen(
         ) {
 
             GlassTopBar(
-                title = "انتخاب مربی",
+                title = "شروع گفتگوی جدید",
                 onBack = onBack
             )
 
@@ -75,9 +81,9 @@ fun ChatContactsScreen(
 
                 is ListState.Success -> {
 
-                    val coaches = currentState.items
+                    val contacts = currentState.items
 
-                    if (coaches.isEmpty()) {
+                    if (contacts.isEmpty()) {
 
                         Box(
                             modifier = Modifier
@@ -86,7 +92,7 @@ fun ChatContactsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "مربی‌ای برای گفتگو یافت نشد",
+                                text = "مخاطبی برای گفتگو یافت نشد",
                                 color = Color.White.copy(alpha = 0.6f),
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -98,7 +104,7 @@ fun ChatContactsScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(top = 64.dp),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            contentPadding = PaddingValues(
                                 horizontal = 16.dp,
                                 vertical = 12.dp
                             ),
@@ -106,13 +112,13 @@ fun ChatContactsScreen(
                         ) {
 
                             items(
-                                items = coaches,
-                                key = { it.userId }) { coach ->
+                                items = contacts,
+                                key = { it.userId }) { contact ->
 
-                                CoachRow(
-                                    coach = coach,
+                                ContactRow(
+                                    contact = contact,
                                     onClick = {
-                                        onSelect(coach.userId)
+                                        onSelect(contact.userId)
                                     })
                             }
                         }
@@ -124,10 +130,20 @@ fun ChatContactsScreen(
 }
 
 @Composable
-private fun CoachRow(
-    coach: ChatContactsViewModel.CoachItem,
+private fun ContactRow(
+    contact: ChatContact,
     onClick: () -> Unit
 ) {
+    val roleLabel = when (contact.role) {
+        "admin" -> "مدیر"
+        "coach" -> "مربی"
+        else    -> contact.role
+    }
+
+    val subtitle = contact.classTitle?.takeIf { it.isNotBlank() }
+        ?.let { "$roleLabel — $it" }
+            ?: roleLabel
+
     GlassCard3D(
         modifier = Modifier.clickable(
             onClick = onClick
@@ -142,8 +158,8 @@ private fun CoachRow(
         ) {
 
             AvatarView(
-                name = coach.fullName,
-                avatarUrl = coach.avatarUrl,
+                name = contact.fullName,
+                avatarUrl = contact.avatarUrl,
                 size = 48.dp,
                 accentColor = GoldPrimary
             )
@@ -157,28 +173,24 @@ private fun CoachRow(
             ) {
 
                 Text(
-                    text = coach.fullName,
+                    text = contact.fullName,
                     color = Color.White,
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.SemiBold
-                    )
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                if (coach.classTitle.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
 
-                    Text(
-                        text = "مربی - ${coach.classTitle}",
-                        color = Color.White.copy(alpha = 0.6f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                } else {
-
-                    Text(
-                        text = "مربی",
-                        color = Color.White.copy(alpha = 0.6f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                Text(
+                    text = subtitle,
+                    color = Color.White.copy(alpha = 0.6f),
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

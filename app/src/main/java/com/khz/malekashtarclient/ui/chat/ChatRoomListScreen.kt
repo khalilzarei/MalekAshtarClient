@@ -17,9 +17,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Badge
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,7 +51,8 @@ import com.khz.malekashtarclient.ui.theme.RedError
 @Composable
 fun ChatRoomListScreen(
     onBack: () -> Unit,
-    onOpenChat: (Int) -> Unit
+    onOpenChat: (Int) -> Unit,
+    onOpenContacts: () -> Unit
 ) {
     val viewModel: ChatRoomListViewModel = appViewModel()
     val state by viewModel.state.collectAsState()
@@ -134,6 +136,21 @@ fun ChatRoomListScreen(
                     }
                 }
             }
+
+            /* شروع گفتگوی جدید (ادمین / مربی) */
+            FloatingActionButton(
+                onClick = onOpenContacts,
+                containerColor = GoldPrimary.copy(alpha = 0.85f),
+                contentColor = Color(0xFF1A0533),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Chat,
+                    contentDescription = "شروع گفتگوی جدید"
+                )
+            }
         }
     }
 }
@@ -193,41 +210,16 @@ private fun ChatRoomItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            if (room.isGroup) {
-
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(
-                            GoldPrimary.copy(
-                                alpha = 0.25f
-                            )
-                        ),
-
-                    contentAlignment = Alignment.Center
-                ) {
-
-                    Icon(
-                        imageVector = Icons.Default.Group,
-
-                        contentDescription = "گروه",
-
-                        tint = GoldPrimary,
-
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-            } else {
-
-                AvatarView(
-                    name = avatarName,
-                    avatarUrl = avatarUrl,
-                    size = 48.dp,
-                    accentColor = GoldPrimary
-                )
-            }
+            /*
+             * طراحی یکسان با اپ ادمین:
+             * گروه‌ها تصویر روم (یا حرف اول عنوان) را نشان می‌دهند.
+             */
+            AvatarView(
+                name = avatarName,
+                avatarUrl = avatarUrl,
+                size = 48.dp,
+                accentColor = GoldPrimary
+            )
 
             Spacer(
                 modifier = Modifier.width(12.dp)
@@ -247,8 +239,8 @@ private fun ChatRoomItem(
                         color = Color.White,
 
                         style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
+                            fontWeight = FontWeight.SemiBold
+                        ),
 
                         modifier = Modifier.weight(1f),
 
@@ -309,8 +301,8 @@ private fun ChatRoomItem(
                         }
 
                         append(lastMessage?.body?.takeIf {
-                                it.isNotBlank()
-                            }
+                            it.isNotBlank()
+                        }
                                 ?: "پیامی ارسال نشده")
                     },
 

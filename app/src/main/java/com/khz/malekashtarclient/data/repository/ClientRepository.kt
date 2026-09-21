@@ -2,8 +2,10 @@ package com.khz.malekashtarclient.data.repository
 
 import com.khz.malekashtarclient.core.network.ApiErrorHandler
 import com.khz.malekashtarclient.core.network.NetworkResult
+import com.khz.malekashtarclient.data.dto.response.ChatContactDto
 import com.khz.malekashtarclient.data.mapper.ClientMapper.toDomain
 import com.khz.malekashtarclient.data.remote.ClientApi
+import com.khz.malekashtarclient.domain.model.ChatContact
 import com.khz.malekashtarclient.domain.model.MyChild
 import com.khz.malekashtarclient.domain.model.MyClass
 import com.khz.malekashtarclient.domain.model.MyFinance
@@ -100,6 +102,32 @@ class ClientRepository(
                 )
             } else {
                 val list = response.data?.classes?.mapNotNull { it.toDomain() }
+                        ?: emptyList()
+
+                NetworkResult.Success(list)
+            }
+        } catch (e: Exception) {
+            NetworkResult.Error(
+                ApiErrorHandler.extractMessage(e)
+            )
+        }
+    }
+
+    /**
+     * مخاطبین قابل گفتگو (ادمین‌ها + مربیان کلاس‌های فرزندان).
+     * بازیکن با هر یک از آن‌ها می‌تواند گفتگوی خصوصی شروع کند.
+     */
+    suspend fun chatContacts(): NetworkResult<List<ChatContactDto>?> {
+        return try {
+            val response = api.chatContacts()
+
+            if (!response.success) {
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در دریافت مخاطبین گفتگو"
+                )
+            } else {
+                val list = response.data?.contacts
                         ?: emptyList()
 
                 NetworkResult.Success(list)
