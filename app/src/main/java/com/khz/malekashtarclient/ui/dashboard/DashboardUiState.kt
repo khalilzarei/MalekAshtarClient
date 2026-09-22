@@ -1,6 +1,7 @@
 package com.khz.malekashtarclient.ui.dashboard
 
 import com.khz.malekashtarclient.domain.model.MyChild
+import com.khz.malekashtarclient.domain.model.MyFinance
 import com.khz.malekashtarclient.domain.model.MyScheduleItem
 import com.khz.malekashtarclient.domain.model.NewsItem
 import com.khz.malekashtarclient.domain.model.User
@@ -12,6 +13,7 @@ data class DashboardUiState(
     val loading: Boolean = true,
     val user: User? = null,
     val child: MyChild? = null,
+    val finance: MyFinance? = null,
     val upcoming: List<MyScheduleItem> = emptyList(),
     val recentNews: List<NewsItem> = emptyList(),
     val unreadChats: Int = 0,

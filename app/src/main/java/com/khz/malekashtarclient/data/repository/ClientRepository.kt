@@ -6,12 +6,14 @@ import com.khz.malekashtarclient.data.dto.response.ChatContactDto
 import com.khz.malekashtarclient.data.mapper.ClientMapper.toDomain
 import com.khz.malekashtarclient.data.remote.ClientApi
 import com.khz.malekashtarclient.domain.model.ChatContact
+import com.khz.malekashtarclient.domain.model.Guardian
 import com.khz.malekashtarclient.domain.model.MyChild
 import com.khz.malekashtarclient.domain.model.MyClass
 import com.khz.malekashtarclient.domain.model.MyFinance
 import com.khz.malekashtarclient.domain.model.MyMatch
 import com.khz.malekashtarclient.domain.model.MyScheduleItem
 import com.khz.malekashtarclient.domain.model.NewsItem
+import com.khz.malekashtarclient.domain.model.PlayerProfile
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -87,6 +89,26 @@ class ClientRepository(
             NetworkResult.Error(
                 ApiErrorHandler.extractMessage(e)
             )
+        }
+    }
+
+    /** جزئیات یک خبر */
+    suspend fun myNewsDetail(id: Int): NetworkResult<NewsItem> {
+        return try {
+            val response = api.myNewsDetail(id)
+            if (!response.success) {
+                NetworkResult.Error(
+                    response.message
+                            ?: "خطا در دریافت خبر"
+                )
+            } else {
+                val dto = response.data?.news
+                val domain = dto?.toDomain()
+                if (domain != null) NetworkResult.Success(domain)
+                else NetworkResult.Error("خبر یافت نشد")
+            }
+        } catch (e: Exception) {
+            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
         }
     }
 
@@ -234,6 +256,103 @@ class ClientRepository(
             NetworkResult.Error(
                 ApiErrorHandler.extractMessage(e)
             )
+        }
+    }
+
+    suspend fun myProfile(): NetworkResult<PlayerProfile> {
+        return try {
+            val response = api.myProfile()
+            if (!response.success) NetworkResult.Error(
+                response.message
+                        ?: "خطا در دریافت پروفایل"
+            )
+            else {
+                val domain = response.data?.toDomain()
+                if (domain != null) NetworkResult.Success(domain)
+                else NetworkResult.Error("پروفایل یافت نشد")
+            }
+        } catch (e: Exception) {
+            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+        }
+    }
+
+    suspend fun updateProfile(body: Map<String, Any?>): NetworkResult<PlayerProfile> {
+        return try {
+            val response = api.updateProfile(body)
+            if (!response.success) NetworkResult.Error(
+                response.message
+                        ?: "خطا در ویرایش پروفایل"
+            )
+            else {
+                val domain = response.data?.toDomain()
+                if (domain != null) NetworkResult.Success(domain)
+                else NetworkResult.Error("خطا در به‌روزرسانی")
+            }
+        } catch (e: Exception) {
+            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+        }
+    }
+
+    suspend fun updateChild(
+        id: Int,
+        body: Map<String, Any?>
+    ): NetworkResult<PlayerProfile> {
+        return try {
+            val response = api.updateChild(
+                id,
+                body
+            )
+            if (!response.success) NetworkResult.Error(
+                response.message
+                        ?: "خطا در ویرایش بازیکن"
+            )
+            else {
+                val domain = response.data?.toDomain()
+                if (domain != null) NetworkResult.Success(domain)
+                else NetworkResult.Error("خطا در به‌روزرسانی")
+            }
+        } catch (e: Exception) {
+            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+        }
+    }
+
+    suspend fun updateGuardian(
+        id: Int,
+        body: Map<String, Any?>
+    ): NetworkResult<PlayerProfile> {
+        return try {
+            val response = api.updateGuardian(
+                id,
+                body
+            )
+            if (!response.success) NetworkResult.Error(
+                response.message
+                        ?: "خطا در ویرایش سرپرست"
+            )
+            else {
+                val domain = response.data?.toDomain()
+                if (domain != null) NetworkResult.Success(domain)
+                else NetworkResult.Error("خطا در به‌روزرسانی")
+            }
+        } catch (e: Exception) {
+            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
+        }
+    }
+
+    suspend fun myEvaluations(): NetworkResult<List<com.khz.malekashtarclient.domain.model.Evaluation>> {
+        return try {
+            val response = api.myEvaluations()
+            if (!response.success) NetworkResult.Error(
+                response.message
+                        ?: "خطا در دریافت ارزیابی‌ها"
+            )
+            else {
+                val list = response.data?.evaluations?.mapNotNull { it.toDomain() }
+                        ?: emptyList()
+                NetworkResult.Success(list)
+            }
+        } catch (e: Exception) {
+            NetworkResult.Error(ApiErrorHandler.extractMessage(e))
         }
     }
 }

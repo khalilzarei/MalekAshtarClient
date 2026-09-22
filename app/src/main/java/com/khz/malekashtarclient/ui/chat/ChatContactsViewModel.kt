@@ -33,33 +33,36 @@ class ChatContactsViewModel(
     }
 
     fun refresh() {
-
         _state.value = ListState.Loading
-
         viewModelScope.launch {
-
             when (val result = clientRepository.chatContacts()) {
-
                 is NetworkResult.Success -> {
-                    if (!result.data.isNullOrEmpty()) {  /* ادمین‌ها اول، سپس مربیان */
-                        val sorted = result.data.sortedWith(
-                            compareBy(
-                                { it.role != "admin" },
-                                { it.fullName })
+                    val list = result.data
+                            ?: emptyList()
+                    val sorted = list.sortedWith(
+                        compareBy(
+                            { it.role != "admin" },
+                            { it.fullName })
+                    )
+                    val domain = sorted.map {
+                        ChatContact(
+                            userId = it.userId,
+                            fullName = it.fullName
+                                    ?: "کاربر",
+                            role = it.role
+                                    ?: "player",
+                            avatarUrl = it.avatarUrl,
+                            classTitle = it.classTitle
                         )
-
-//                        _state.value = ListState.Success(sorted)
                     }
+                    _state.value = ListState.Success(domain)
                 }
 
                 is NetworkResult.Error   -> {
-
                     _state.value = ListState.Error(result.message)
                 }
 
-                else                     -> {
-                    Unit
-                }
+                else                     -> Unit
             }
         }
     }

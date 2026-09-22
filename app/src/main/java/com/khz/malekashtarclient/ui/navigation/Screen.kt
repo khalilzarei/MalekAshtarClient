@@ -14,6 +14,10 @@ sealed class Screen(val route: String) {
 
     // صفحات اصلی
     data object NewsList : Screen("news_list")
+    data object NewsDetail : Screen("news_detail/{newsId}") {
+        fun create(newsId: Int): String = "news_detail/$newsId"
+    }
+
     data object Classes : Screen("classes")
     data object Finance : Screen("finance")
     data object Matches : Screen("matches")

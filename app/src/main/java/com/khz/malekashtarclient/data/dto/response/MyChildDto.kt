@@ -25,6 +25,7 @@ data class MyChildDto(
 data class MyChildClassDto(
     @SerializedName("id") val id: Int? = null,
     @SerializedName("title") val title: String? = null,
+    @SerializedName("age_group_title") val ageGroupTitle: String? = null,
     @SerializedName("season_id") val seasonId: Int? = null,
     @SerializedName("age_group_id") val ageGroupId: Int? = null,
     @SerializedName("coach_id") val coachId: Int? = null,

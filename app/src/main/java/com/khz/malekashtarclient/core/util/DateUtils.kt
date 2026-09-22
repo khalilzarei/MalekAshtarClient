@@ -449,4 +449,133 @@ object DateUtils {
             null
         }
     }
+
+    /** تبدیل تاریخ شمسی به میلادی YYYY-MM-DD - کپی از اپ ادمین برای JalaliDatePicker */
+    fun jalaliToGregorian(
+        jYear: Int,
+        jMonth: Int,
+        jDay: Int
+    ): String {
+        var jy = jYear - 979
+        var jm = jMonth - 1
+        var jd = jDay - 1
+        var jDayNo = 365 * jy + (jy / 33) * 8 + ((jy % 33) + 3) / 4
+        for (i in 0 until jm) jDayNo += if (i < 6) 31 else 30
+        jDayNo += jd
+        var gDayNo = jDayNo + 79
+        var gy = 1600 + 400 * (gDayNo / 146097)
+        gDayNo %= 146097
+        var leap = true
+        if (gDayNo >= 36525) {
+            gDayNo--
+            gy += 100 * (gDayNo / 36524)
+            gDayNo %= 36524
+            if (gDayNo >= 365) gDayNo++ else leap = false
+        }
+        gy += 4 * (gDayNo / 1461)
+        gDayNo %= 1461
+        if (gDayNo >= 366) {
+            leap = false
+            gDayNo--
+            gy += gDayNo / 365
+            gDayNo %= 365
+        }
+        val gDays = arrayOf(
+            31,
+            if (leap) 29 else 28,
+            31,
+            30,
+            31,
+            30,
+            31,
+            31,
+            30,
+            31,
+            30,
+            31
+        )
+        var gm = 0
+        while (gDayNo >= gDays[gm]) {
+            gDayNo -= gDays[gm]
+            gm++
+        }
+        return String.format(
+            Locale.US,
+            "%04d-%02d-%02d",
+            gy,
+            gm + 1,
+            gDayNo + 1
+        )
+    }
+
+    /** تبدیل میلادی YYYY-MM-DD به شمسی YYYY/MM/DD - کپی از اپ ادمین */
+    fun gregorianToJalali(gregorianDate: String): String {
+        return try {
+            val parts = gregorianDate.trim()
+                .split("-")
+            val gy0 = parts[0].toInt()
+            val gm = parts[1].toInt()
+            val gd0 = parts[2].toInt()
+            val gDaysInMonth = intArrayOf(
+                31,
+                28,
+                31,
+                30,
+                31,
+                30,
+                31,
+                31,
+                30,
+                31,
+                30,
+                31
+            )
+            val gy = gy0 - 1600
+            val gmi = gm - 1
+            val gd = gd0 - 1
+            var gDayNo = 365 * gy + (gy + 3) / 4 - (gy + 99) / 100 + (gy + 399) / 400
+            for (i in 0 until gmi) gDayNo += gDaysInMonth[i]
+            if (gmi > 1 && ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0))) gDayNo++
+            gDayNo += gd
+            var jDayNo = gDayNo - 79
+            val jNp = jDayNo / 12053
+            jDayNo %= 12053
+            var jy = 979 + 33 * jNp + 4 * (jDayNo / 1461)
+            jDayNo %= 1461
+            if (jDayNo >= 366) {
+                jy += (jDayNo - 1) / 365
+                jDayNo = (jDayNo - 1) % 365
+            }
+            val r = (jy - 979) % 33
+            val isJalaliLeap = r == 0 || r == 4 || r == 8 || r == 12 || r == 16 || r == 20 || r == 24 || r == 28
+            val jDaysInMonth = intArrayOf(
+                31,
+                31,
+                31,
+                31,
+                31,
+                31,
+                30,
+                30,
+                30,
+                30,
+                30,
+                if (isJalaliLeap) 30 else 29
+            )
+            var jm = 0
+            while (jm < 12 && jDayNo >= jDaysInMonth[jm]) {
+                jDayNo -= jDaysInMonth[jm]
+                jm++
+            }
+            String.format(
+                Locale.US,
+                "%04d/%02d/%02d",
+                jy,
+                jm + 1,
+                jDayNo + 1
+            )
+        } catch (e: Exception) {
+            ""
+        }
+    }
 }

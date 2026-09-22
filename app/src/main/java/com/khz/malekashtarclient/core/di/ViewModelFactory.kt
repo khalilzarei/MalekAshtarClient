@@ -3,11 +3,13 @@ package com.khz.malekashtarclient.core.di
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.khz.malekashtarclient.ui.auth.AuthViewModel
+import com.khz.malekashtarclient.ui.chat.ChatContactsViewModel
 import com.khz.malekashtarclient.ui.chat.ChatRoomListViewModel
 import com.khz.malekashtarclient.ui.classes.ClassesViewModel
 import com.khz.malekashtarclient.ui.dashboard.DashboardViewModel
 import com.khz.malekashtarclient.ui.finance.FinanceViewModel
 import com.khz.malekashtarclient.ui.matches.MatchesViewModel
+import com.khz.malekashtarclient.ui.news.NewsDetailViewModel
 import com.khz.malekashtarclient.ui.news.NewsListViewModel
 import com.khz.malekashtarclient.ui.profile.ProfileViewModel
 
@@ -39,12 +41,15 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
             // Profile
             ProfileViewModel::class.java      -> ProfileViewModel(
                 container.authRepository,
-                container.clientRepository,
-                container.sessionManager
+                container.clientRepository
             ) as T
 
             // News
             NewsListViewModel::class.java     -> NewsListViewModel(
+                container.clientRepository
+            ) as T
+
+            NewsDetailViewModel::class.java   -> NewsDetailViewModel(
                 container.clientRepository
             ) as T
 
@@ -67,6 +72,10 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
             // Chat Room List
             ChatRoomListViewModel::class.java -> ChatRoomListViewModel(
                 container.chatRepository
+            ) as T
+
+            ChatContactsViewModel::class.java -> ChatContactsViewModel(
+                container.clientRepository
             ) as T
 
             else                              -> throw IllegalArgumentException("ViewModel ناشناخته: ${modelClass.name}")

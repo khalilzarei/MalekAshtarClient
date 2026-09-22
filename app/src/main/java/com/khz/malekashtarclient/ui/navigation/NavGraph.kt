@@ -108,6 +108,9 @@ fun RootNavGraph() {
             DashboardScreen(
                 onNavigateToChats = { navController.navigate(Screen.ChatRoomList.route) },
                 onNavigateToNews = { navController.navigate(Screen.NewsList.route) },
+                onNavigateToNewsDetail = { newsId ->
+                    navController.navigate(Screen.NewsDetail.create(newsId))
+                },
                 onNavigateToClasses = { navController.navigate(Screen.Classes.route) },
                 onNavigateToFinance = { navController.navigate(Screen.Finance.route) },
                 onNavigateToMatches = { navController.navigate(Screen.Matches.route) },
@@ -124,7 +127,22 @@ fun RootNavGraph() {
 
         // ─── News ───
         composable(Screen.NewsList.route) {
-            NewsListScreen(onBack = { navController.popBackStack() })
+            NewsListScreen(
+                onBack = { navController.popBackStack() },
+                onNewsClick = { newsId ->
+                    navController.navigate(Screen.NewsDetail.create(newsId))
+                })
+        }
+
+        composable(
+            route = Screen.NewsDetail.route,
+            arguments = listOf(navArgument("newsId") { type = NavType.IntType })
+        ) { entry ->
+            val newsId = entry.arguments?.getInt("newsId")
+                    ?: -1
+            com.khz.malekashtarclient.ui.news.NewsDetailScreen(
+                newsId = newsId,
+                onBack = { navController.popBackStack() })
         }
 
         // ─── Classes ───
@@ -204,12 +222,6 @@ fun RootNavGraph() {
                 roomId = roomId,
                 targetUserId = userId,
                 initialTitle = title
-            )
-        }
-
-        composable(Screen.NewsList.route) {
-            NewsListScreen(
-                onBack = { navController.popBackStack() },
             )
         }
     }

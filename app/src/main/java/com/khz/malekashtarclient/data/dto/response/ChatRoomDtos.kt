@@ -4,109 +4,80 @@ import com.google.gson.annotations.SerializedName
 
 data class ChatRoomDto(
 
-    @SerializedName("id")
-    val id: Int? = null,
+    @SerializedName("id") val id: Int? = null,
 
-    @SerializedName("is_group")
-    val isGroup: Boolean? = null,
+    @SerializedName("is_group") val isGroup: Boolean? = null,
 
-    @SerializedName("title")
-    val title: String? = null,
+    @SerializedName("title") val title: String? = null,
 
-    @SerializedName("image")
-    val image: String? = null,
+    @SerializedName("image") val image: String? = null,
 
-    @SerializedName("users")
-    val users: List<ChatRoomUserDto> = emptyList(),
+    @SerializedName("users") val users: List<ChatRoomUserDto> = emptyList(),
 
-    @SerializedName("last_message")
-    val lastMessage: ChatMessageDto? = null,
+    @SerializedName("last_message") val lastMessage: ChatMessageDto? = null,
 
-    @SerializedName("unread_count")
-    val unreadCount: Int? = null,
+    @SerializedName("unread_count") val unreadCount: Int? = null,
 
-    @SerializedName("status")
-    val status: String? = null,
+    @SerializedName("status") val status: String? = null,
 
-    @SerializedName("is_locked")
-    val isLocked: Any? = null,
+    @SerializedName("is_locked") val isLocked: Any? = null,
 
     /**
      * فقط metadata قدیمی/اختیاری.
      * شناسه کاربر چت نیست.
      */
-    @SerializedName("player_id")
-    val playerId: Int? = null,
+    @SerializedName("player_id") val playerId: Int? = null,
 
-    @SerializedName("class_id")
-    val classId: Int? = null,
+    @SerializedName("class_id") val classId: Int? = null,
 
-    @SerializedName("subject")
-    val subject: String? = null,
+    @SerializedName("subject") val subject: String? = null,
 
-    @SerializedName("created_at")
-    val createdAt: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null,
 
-    @SerializedName("updated_at")
-    val updatedAt: String? = null
+    @SerializedName("updated_at") val updatedAt: String? = null
 )
 
 data class ChatRoomUserDto(
 
-    @SerializedName("id")
-    val id: Int? = null,
+    @SerializedName("id") val id: Int? = null,
 
-    @SerializedName("full_name")
-    val fullName: String? = null,
+    @SerializedName("full_name") val fullName: String? = null,
 
-    @SerializedName("avatar")
-    val avatar: String? = null,
+    @SerializedName("avatar") val avatar: String? = null,
 
-    @SerializedName("role")
-    val role: String? = null,
+    @SerializedName("role") val role: String? = null,
 
-    @SerializedName("member_role")
-    val memberRole: String? = null
+    @SerializedName("member_role") val memberRole: String? = null
 )
 
 data class ChatRoomMemberDto(
 
-    @SerializedName("user_id")
-    val userId: Int? = null,
+    @SerializedName("user_id") val userId: Int? = null,
 
-    @SerializedName("full_name")
-    val fullName: String? = null,
+    @SerializedName("full_name") val fullName: String? = null,
 
-    @SerializedName("role")
-    val role: String? = null,
+    @SerializedName("role") val role: String? = null,
 
-    @SerializedName("member_role")
-    val memberRole: String? = null,
+    @SerializedName("member_role") val memberRole: String? = null,
 
-    @SerializedName("last_read_message_id")
-    val lastReadMessageId: Int? = null
+    @SerializedName("last_read_message_id") val lastReadMessageId: Int? = null
 )
 
 data class ChatRoomListWrapperDto(
-    @SerializedName("rooms")
-    val rooms: List<ChatRoomDto> = emptyList()
+    @SerializedName("rooms") val rooms: List<ChatRoomDto> = emptyList()
 )
 
 data class CreateRoomWrapperDto(
-    @SerializedName("room")
-    val room: ChatRoomDto? = null
+    @SerializedName("room") val room: ChatRoomDto? = null
 )
 
 data class MessagesWrapperDto(
-    @SerializedName("messages")
-    val messages: List<ChatMessageDto> = emptyList()
+    @SerializedName("messages") val messages: List<ChatMessageDto> = emptyList()
 )
 
 data class SendMessageWrapperDto(
-    @SerializedName("message")
-    val message: ChatMessageDto? = null
+    @SerializedName("message") val message: ChatMessageDto? = null
 )
-
 
 /* ═══════════════ Wrapper DTOs ═══════════════ */
 
@@ -123,6 +94,15 @@ data class MyScheduleWrapperDto(
 /** پاکت me/news: data.news = [...] */
 data class NewsWrapperDto(
     val news: List<NewsDto> = emptyList()
+)
+
+data class NewsDetailWrapperDto(
+    val news: NewsDto? = null
+)
+
+/** پاکت me/media */
+data class MediaWrapperDto(
+    val media: List<MediaDto> = emptyList()
 )
 
 /** پاکت me/classes: data.classes = [...] */

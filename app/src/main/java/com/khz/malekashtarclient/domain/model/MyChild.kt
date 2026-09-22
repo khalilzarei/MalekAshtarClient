@@ -18,6 +18,7 @@ data class MyChild(
 data class MyChildClass(
     val id: Int,
     val title: String,
+    val ageGroupTitle: String?,
     val capacity: Int?,
     val enrolledCount: Int?,
     val status: String?

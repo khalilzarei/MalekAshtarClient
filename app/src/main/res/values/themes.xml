@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- تم بدون نیاز به کتابخانه splashscreen - روی اندروید 12+ سیستم خودش آیکن لانچر رو نشون میده -->
+    <!-- برای اینکه فقط یه اسپلش دیده بشه، اسپلش کامپوزی بدون لوگوست -->
+    <style name="Theme.MalekAshtarClient" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+        <!-- اندروید 12+ - اسپلش سیستمی -->
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+    </style>
 
-    <style name="Theme.MalekAshtarClient" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MalekAshtarClient.Main" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
 </resources>
