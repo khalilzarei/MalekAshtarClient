@@ -26,5 +26,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MalekAshtarClient"
+rootProject.name = "MalekClient"
 include(":app")

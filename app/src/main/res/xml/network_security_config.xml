@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    اجازه‌ی ترافیک بدون SSL (http) فقط برای دامنه‌های سرور؛
+    در صورتی که سرور گواهی SSL نداشته باشد، اپ به http وصل می‌شود.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">football.madahinote.ir</domain>
+        <domain includeSubdomains="true">api.malekashtarkaz.ir</domain>
+    </domain-config>
+</network-security-config>

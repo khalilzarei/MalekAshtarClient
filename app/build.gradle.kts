@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.khz.malekashtarclient"
+    namespace = "com.khz.malekclient"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.khz.malekashtarclient"
+        applicationId = "com.khz.malekclient"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -46,6 +46,11 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    // =========================
+    // WorkManager (نوتیفیکیشن چت پس‌زمینه)
+    // =========================
+
+    implementation(libs.androidx.work.runtime.ktx)
 
     // =========================
     // Android
