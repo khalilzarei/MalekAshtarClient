@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.khz.malekclient.ui.theme.GoldOn
 import com.khz.malekclient.ui.theme.GoldPrimary
+import com.khz.malekclient.ui.theme.DesignTokens
 
 /**
  * دکمه‌ی شیشه‌ای با پس‌زمینه‌ی گرادیان طلایی
@@ -32,9 +33,9 @@ fun GlassButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    height: Dp = 48.dp
+    height: Dp = DesignTokens.ControlHeight
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(DesignTokens.ControlRadius)
     Box(
         modifier = modifier
             .fillMaxWidth()

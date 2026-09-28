@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.khz.malekclient.ui.theme.DesignTokens
 
 /**
  * صفحه‌ی لیستی عمومی با ۳ حالت:
@@ -60,7 +61,7 @@ fun <T> GenericListScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(24.dp),
+                            .padding(DesignTokens.Space5),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -78,10 +79,10 @@ fun <T> GenericListScreen(
                             .fillMaxSize()
                             .padding(top = 64.dp),
                         contentPadding = PaddingValues(
-                            horizontal = 16.dp,
-                            vertical = 12.dp
+                            horizontal = DesignTokens.ContentInset,
+                            vertical = DesignTokens.Space3
                         ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(DesignTokens.ListItemGap)
                     ) {
 
                         items(

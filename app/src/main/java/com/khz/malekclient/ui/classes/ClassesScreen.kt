@@ -471,13 +471,21 @@ private fun ClassCardWithSchedule(
                                         "scheduled" -> "برنامه‌ریزی شده"
                                         "completed" -> "برگزار شده"
                                         "makeup"    -> "جبرانی"
+                                        "cancelled" -> "لغو شده"
                                         else        -> it
                                     }
                                     Text(
                                         statusText,
-                                        color = Color.White.copy(0.5f),
+                                        color = if (it == "cancelled") Color(0xFFFF8A80) else Color.White.copy(0.5f),
                                         style = MaterialTheme.typography.labelSmall
                                     )
+                                    if (it == "cancelled") {
+                                        Text(
+                                            "این جلسه برگزار نمی‌شود.",
+                                            color = Color(0xFFFF8A80).copy(alpha = 0.85f),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
                                 }
                             }
                         }

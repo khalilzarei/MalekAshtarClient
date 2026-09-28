@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.khz.malekclient.ui.theme.GlassBorder
 import com.khz.malekclient.ui.theme.PurplePrimary
 import com.khz.malekclient.ui.theme.WhiteTransparent15
+import com.khz.malekclient.ui.theme.DesignTokens
 
 /**
  * کارت شیشه‌ای ۳ بعدی — با حاشیه‌ی براق و ته‌رنگ بنفش
@@ -26,9 +27,9 @@ import com.khz.malekclient.ui.theme.WhiteTransparent15
 @Composable
 fun GlassCard3D(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 24.dp,
+    cornerRadius: Dp = DesignTokens.CardRadius,
     onClick: (() -> Unit)? = null,
-    contentPadding: Dp = 18.dp,
+    contentPadding: Dp = DesignTokens.Space4,
     content: @Composable () -> Unit
 ) {
     val shape = RoundedCornerShape(cornerRadius)

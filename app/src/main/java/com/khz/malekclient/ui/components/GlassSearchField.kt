@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.khz.malekclient.ui.theme.GlassBorder
 import com.khz.malekclient.ui.theme.GoldPrimary
 import com.khz.malekclient.ui.theme.WhiteTransparent08
+import com.khz.malekclient.ui.theme.DesignTokens
 
 /**
  * فیلد جستجو با آیکون ذره‌بین
@@ -37,22 +38,22 @@ fun GlassSearchField(
     placeholder: String = "جستجو...",
     enabled: Boolean = true
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(DesignTokens.ControlRadius)
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(DesignTokens.InputHeight)
             .background(color = WhiteTransparent08, shape = shape)
             .border(width = 1.dp, color = GlassBorder, shape = shape)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = DesignTokens.Space3),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             Icons.Default.Search,
             contentDescription = "جستجو",
             tint = GoldPrimary,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(DesignTokens.IconMedium)
         )
 
         Spacer(Modifier.width(8.dp))

@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.khz.malekclient.ui.theme.GoldPrimary
+import com.khz.malekclient.ui.theme.DesignTokens
 
 /**
  * نوار بالای صفحه - نسخه هماهنگ با اپ ادمین
@@ -44,10 +45,10 @@ fun GlassTopBar(
                     AvatarView(
                         name = title,
                         avatarUrl = avatarUrl,
-                        size = 36.dp,
+                        size = DesignTokens.Avatar,
                         accentColor = GoldPrimary
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(DesignTokens.Space3))
                     Column {
                         Text(
                             text = title,

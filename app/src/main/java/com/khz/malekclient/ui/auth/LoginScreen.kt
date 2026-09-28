@@ -103,7 +103,7 @@ fun LoginScreen(
                         nationalCode = input.filter { ch -> ch.isDigit() }.take(10)
                     },
                     label = "کد ملی بازیکن",
-                    placeholder = "مثلاً ۱۲۳۴۵۶۷۸۹۰",
+                    placeholder = "مثلاً 09179170917",
                     keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Next,
                     enabled = state !is LoginUiState.Loading

@@ -82,8 +82,7 @@ fun DashboardScreen(
     onNavigateToClasses: () -> Unit,
     onNavigateToFinance: () -> Unit,
     onNavigateToMatches: () -> Unit,
-    onNavigateToProfile: () -> Unit,
-    onLogout: () -> Unit
+    onNavigateToProfile: () -> Unit
 ) {
     val viewModel: DashboardViewModel = appViewModel()
     val state by viewModel.state.collectAsState()
@@ -92,8 +91,6 @@ fun DashboardScreen(
     val token by produceState<String?>(initialValue = null) {
         value = container.sessionManager.getTokenSync()
     }
-
-    val showLogoutDialog = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     // هر بار که داشبورد نمایش داده می‌شود (بعد از برگشت از پروفایل) رفرش کن تا آواتار جدید دیده شود
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -104,44 +101,6 @@ fun DashboardScreen(
     val currentDebt = state.finance?.debt
             ?: state.child?.balance?.debt
             ?: 0L
-
-    if (showLogoutDialog.value) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showLogoutDialog.value = false },
-            title = {
-                Text(
-                    "خروج از حساب",
-                    color = Color.White
-                )
-            },
-            text = {
-                Text(
-                    "آیا مطمئن هستید که می‌خواهید خارج شوید؟",
-                    color = Color.White.copy(0.8f)
-                )
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    showLogoutDialog.value = false
-                    onLogout()
-                }) {
-                    Text(
-                        "خروج",
-                        color = RedError
-                    )
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showLogoutDialog.value = false }) {
-                    Text(
-                        "انصراف",
-                        color = Color.White
-                    )
-                }
-            },
-            containerColor = PurplePrimary.copy(alpha = 0.95f)
-        )
-    }
 
     // ─── دیالوگ یادآوری بدهی (دیزاین شیشه‌ای ۳بعدی — یک‌بار در هر نشست) ───
     if (state.showDebtDialog) {
@@ -190,29 +149,6 @@ fun DashboardScreen(
                         }
                     }
 
-                    // کارت بازیکن - گروه سنی + ویرایش پروفایل + بدهی از finance
-                    item {
-                        PlayerCard(
-                            playerName = state.child?.fullName
-                                    ?: state.user?.fullName
-                                    ?: "بازیکن",
-                            avatarUrl = state.child?.avatarUrl
-                                    ?: state.user?.avatarUrl,
-                            ageGroupTitle = state.child?.currentClass?.ageGroupTitle
-                                    ?: state.child?.currentClass?.title,
-                            debt = state.finance?.debt
-                                    ?: state.child?.balance?.debt
-                                    ?: 0L,
-                            isDebtor = state.finance?.isDebtor
-                                    ?: ((state.finance?.debt
-                                            ?: 0L) > 0 || (state.child?.balance?.debt
-                                            ?: 0L) > 0),
-                            classFees = state.finance?.classFees
-                                    ?: emptyList(),
-                            onClick = onNavigateToProfile
-                        )
-                    }
-
                     // اخبار افقی با عکس - زیر اسلایدر - کوچکتر + شیشه‌ای
                     if (state.recentNews.isNotEmpty()) {
                         item {
@@ -236,6 +172,29 @@ fun DashboardScreen(
                                 }
                             }
                         }
+                    }
+
+                    // پروفایل بعد از اخبار نمایش داده شود
+                    item {
+                        PlayerCard(
+                            playerName = state.child?.fullName
+                                    ?: state.user?.fullName
+                                    ?: "بازیکن",
+                            avatarUrl = state.child?.avatarUrl
+                                    ?: state.user?.avatarUrl,
+                            ageGroupTitle = state.child?.currentClass?.ageGroupTitle
+                                    ?: state.child?.currentClass?.title,
+                            debt = state.finance?.debt
+                                    ?: state.child?.balance?.debt
+                                    ?: 0L,
+                            isDebtor = state.finance?.isDebtor
+                                    ?: ((state.finance?.debt
+                                            ?: 0L) > 0 || (state.child?.balance?.debt
+                                            ?: 0L) > 0),
+                            classFees = state.finance?.classFees
+                                    ?: emptyList(),
+                            onClick = onNavigateToProfile
+                        )
                     }
 
                     // کلاس پیش‌رو - فقط یکی + دکمه همه طلایی
@@ -267,21 +226,6 @@ fun DashboardScreen(
                         )
                     }
 
-                    // خروج - با دیالوگ تایید
-                    item {
-                        Spacer(Modifier.height(8.dp))
-                        androidx.compose.material3.TextButton(
-                            onClick = { showLogoutDialog.value = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "خروج از حساب",
-                                color = Color(0xFFFF8A80),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        Spacer(Modifier.height(20.dp))
-                    }
                 }
             }
         }
@@ -717,67 +661,91 @@ private fun SessionCardSingle(
     onClick: () -> Unit
 ) {
     GlassCard3D(onClick = onClick) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(GoldPrimary.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.Schedule,
-                    null,
-                    tint = GoldPrimary,
-                    modifier = Modifier.size(26.dp)
-                )
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(GoldPrimary.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Schedule,
+                        null,
+                        tint = GoldPrimary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = s.classTitle,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = DateUtils.toJalaliReadable(s.sessionDate)
+                            .toPersianDigits(),
+                        color = Color.White.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    s.topic?.takeIf { it.isNotBlank() }
+                        ?.let {
+                            Text(
+                                text = it,
+                                color = Color.White.copy(alpha = 0.5f),
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    if (s.status == "cancelled") {
+                        Text(
+                            "لغو شده",
+                            color = Color(0xFFFF8A80),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                    Text(
+                        text = s.startTime.take(5)
+                            .toPersianDigits(),
+                        color = GoldPrimary,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    s.location?.takeIf { it.isNotBlank() }
+                        ?.let {
+                            Text(
+                                text = it.take(12),
+                                color = Color.White.copy(0.5f),
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1
+                            )
+                        }
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            if (s.status == "cancelled") {
                 Text(
-                    text = s.classTitle,
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = DateUtils.toJalaliReadable(s.sessionDate)
-                        .toPersianDigits(),
-                    color = Color.White.copy(alpha = 0.7f),
+                    "این جلسه لغو شده است؛ حضور و غیاب برای آن ثبت نمی‌شود.",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFFF8A80).copy(alpha = 0.12f))
+                        .padding(
+                            horizontal = 12.dp,
+                            vertical = 8.dp
+                        ),
+                    color = Color(0xFFFF8A80),
                     style = MaterialTheme.typography.bodySmall
                 )
-                s.topic?.takeIf { it.isNotBlank() }
-                    ?.let {
-                        Text(
-                            text = it,
-                            color = Color.White.copy(alpha = 0.5f),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = s.startTime.take(5)
-                        .toPersianDigits(),
-                    color = GoldPrimary,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-                s.location?.takeIf { it.isNotBlank() }
-                    ?.let {
-                        Text(
-                            text = it.take(12),
-                            color = Color.White.copy(0.5f),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1
-                        )
-                    }
             }
         }
     }

@@ -19,6 +19,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import com.khz.malekclient.ui.theme.GoldPrimary
+import com.khz.malekclient.ui.theme.DesignTokens
 
 /**
  * نمایش آواتار به‌صورت دایره‌ای
@@ -30,7 +31,7 @@ fun AvatarView(
     name: String?,
     avatarUrl: String? = null,
     avatarUri: Any? = null, // برای پیش‌نمایش لوکال بعد از انتخاب عکس
-    size: Dp = 48.dp,
+    size: Dp = DesignTokens.Avatar,
     accentColor: Color = GoldPrimary
 ) {
     val safeUrl = avatarUrl?.takeIf { it.isNotBlank() }

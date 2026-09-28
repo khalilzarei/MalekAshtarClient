@@ -46,6 +46,21 @@ class ChatRepository(
     ): NetworkResult<ChatRoom> {
         return try {
 
+            val roomsResponse = api.rooms()
+            if (!roomsResponse.success) {
+                return NetworkResult.Error(
+                    roomsResponse.message
+                            ?: "بررسی گفتگوهای قبلی ناموفق بود."
+                )
+            }
+
+            val existingRoom = roomsResponse.data?.rooms?.firstOrNull { room ->
+                room.isGroup == false && room.users.any { it.id == targetUserId }
+            }
+            if (existingRoom != null) {
+                return NetworkResult.Success(existingRoom.toDomain())
+            }
+
             val response = api.createOrGetPrivateRoom(
                 body = mapOf(
                     "target_user_id" to targetUserId

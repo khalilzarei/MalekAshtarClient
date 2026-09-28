@@ -65,6 +65,7 @@ import com.khz.malekclient.ui.theme.GlassBorder
 import com.khz.malekclient.ui.theme.GoldPrimary
 import com.khz.malekclient.ui.theme.PurplePrimary
 import com.khz.malekclient.ui.theme.RedError
+import com.khz.malekclient.ui.theme.DesignTokens
 import java.io.File
 import java.io.FileOutputStream
 
@@ -907,6 +908,7 @@ private fun GlassTextField(
             )
         },
         modifier = modifier,
+        textStyle = MaterialTheme.typography.bodyMedium,
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White,
@@ -914,7 +916,7 @@ private fun GlassTextField(
             unfocusedBorderColor = GlassBorder,
             cursorColor = GoldPrimary
         ),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(DesignTokens.ControlRadius),
         singleLine = true
     )
 }

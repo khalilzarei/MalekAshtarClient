@@ -36,12 +36,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.khz.malekclient.ui.components.AvatarView
 import com.khz.malekclient.ui.theme.GoldPrimary
-
 
 @Composable
 internal fun TelegramChatBackdrop(
@@ -189,25 +189,26 @@ internal fun TelegramChatTopBar(
             ) {
                 Row(
                     modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    AvatarView(
-                        name = title,
-                        avatarUrl = avatarUrl,
-                        size = 38.dp,
-                        accentColor = GoldPrimary
-                    )
-
-                    Spacer(modifier = Modifier.width(9.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
                                 text = title,
+                                modifier = Modifier.weight(1f),
                                 color = Color.White,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Right,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -224,16 +225,26 @@ internal fun TelegramChatTopBar(
                         }
                         Text(
                             text = subtitle,
+                            modifier = Modifier.fillMaxWidth(),
                             color = Color.White.copy(alpha = 0.62f),
                             style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Right,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+                    Spacer(modifier = Modifier.width(9.dp))
+
+                    AvatarView(
+                        name = title,
+                        avatarUrl = avatarUrl,
+                        size = 38.dp,
+                        accentColor = GoldPrimary
+                    )
                 }
             }
 
-            Box(
+            if (showCall) Box(
                 modifier = Modifier
                     .width(52.dp)
                     .height(52.dp)
@@ -278,4 +289,3 @@ internal fun TelegramChatTopBar(
         }
     }
 }
-

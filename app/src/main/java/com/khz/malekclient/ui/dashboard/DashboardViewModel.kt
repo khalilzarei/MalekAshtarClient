@@ -3,6 +3,7 @@ package com.khz.malekclient.ui.dashboard
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.khz.malekclient.core.util.DateUtils
 import com.khz.malekclient.core.local.SessionManager
 import com.khz.malekclient.core.network.NetworkResult
 import com.khz.malekclient.data.repository.AuthRepository
@@ -13,6 +14,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * ViewModel داشبورد
@@ -65,7 +69,10 @@ class DashboardViewModel(
                         "session id=${it.id} date='${it.sessionDate}' time='${it.startTime}' status='${it.status}'"
                     )
                 }
-                val upcoming = allSessions?.filter { it.status == "scheduled" || it.status == "makeup" || it.status == null }
+                val upcoming = allSessions?.filter {
+                    isUpcoming(it.sessionDate, it.startTime) &&
+                            (it.status == "scheduled" || it.status == "makeup" || it.status == "cancelled" || it.status == null)
+                }
                     ?.sortedWith(
                         compareBy(
                             { it.sessionDate.ifBlank { "9999" } },
@@ -104,6 +111,16 @@ class DashboardViewModel(
 
     fun dismissDebtDialog() {
         _state.value = _state.value.copy(showDebtDialog = false)
+    }
+
+    private fun isUpcoming(sessionDate: String, startTime: String): Boolean {
+        if (sessionDate.isBlank()) return false
+        val today = DateUtils.todayGregorian()
+        if (sessionDate > today) return true
+        if (sessionDate < today) return false
+
+        val now = SimpleDateFormat("HH:mm", Locale.US).format(Date())
+        return startTime.take(5).let { it.length == 5 && it >= now }
     }
 
     suspend fun clearSession() {

@@ -137,15 +137,7 @@ fun RootNavGraph() {
                     onNavigateToClasses = { navController.navigate(Screen.Classes.route) },
                     onNavigateToFinance = { navController.navigate(Screen.Finance.route) },
                     onNavigateToMatches = { navController.navigate(Screen.Matches.route) },
-                    onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
-                    onLogout = {
-                        scope.launch {
-                            container.authRepository.logout()
-                            navController.navigate(Screen.Login.route) {
-                                popUpTo(Screen.Dashboard.route) { inclusive = true }
-                            }
-                        }
-                    })
+                    onNavigateToProfile = { navController.navigate(Screen.Profile.route) })
             }
 
             // ─── News ───
