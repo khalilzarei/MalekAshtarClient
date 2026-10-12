@@ -18,6 +18,8 @@ data class DashboardUiState(
     val recentNews: List<NewsItem> = emptyList(),
     val unreadChats: Int = 0,
     val error: String? = null,
+    /** اگر داده از کش آفلاین آمده، بنر کوچک نشان داده می‌شود */
+    val isFromCache: Boolean = false,
 
     // یادآوری بدهی — فقط یک‌بار در هر نشست (نشان نمی‌شود هر بار که به داشبورد برگشتیم)
     val showDebtDialog: Boolean = false,

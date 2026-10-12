@@ -29,16 +29,28 @@ class AuthRepository(
 
     /**
      * ورود
-     * در صورت موفقیت، token + userId + role در SessionManager ذخیره می‌شود.
+     * در صورت موفقیت، token + userId + role + rememberMe در SessionManager ذخیره می‌شود.
      */
-    suspend fun login(identifier: String, password: String): NetworkResult<LoginResult> {
+    suspend fun login(
+        identifier: String,
+        password: String,
+        rememberMe: Boolean = true
+    ): NetworkResult<LoginResult> {
         return try {
-            val response = api.login(LoginRequest(identifier, password))
+            val response = api.login(
+                LoginRequest(
+                    identifier,
+                    password
+                )
+            )
             if (!response.success) {
-                return NetworkResult.Error(response.message ?: "خطا در ورود")
+                return NetworkResult.Error(
+                    response.message
+                            ?: "خطا در ورود"
+                )
             }
             val result = response.data?.toResult()
-                ?: return NetworkResult.Error("پاسخ سرور نامعتبر است")
+                    ?: return NetworkResult.Error("پاسخ سرور نامعتبر است")
 
             // ذخیره‌ی session
             sessionManager.saveToken(result.token)
@@ -46,6 +58,7 @@ class AuthRepository(
                 userId = result.user.id.toString(),
                 role = result.user.role
             )
+            sessionManager.setRememberMe(rememberMe)
 
             NetworkResult.Success(result)
         } catch (e: Exception) {
@@ -58,10 +71,13 @@ class AuthRepository(
         return try {
             val response = api.me()
             if (!response.success) {
-                return NetworkResult.Error(response.message ?: "خطا در دریافت اطلاعات کاربر")
+                return NetworkResult.Error(
+                    response.message
+                            ?: "خطا در دریافت اطلاعات کاربر"
+                )
             }
             val user = response.data?.toDomain()
-                ?: return NetworkResult.Error("پاسخ سرور نامعتبر است")
+                    ?: return NetworkResult.Error("پاسخ سرور نامعتبر است")
             NetworkResult.Success(user)
         } catch (e: Exception) {
             NetworkResult.Error(ApiErrorHandler.extractMessage(e))
@@ -76,10 +92,17 @@ class AuthRepository(
     ): NetworkResult<User> {
         return try {
             val response = api.changePassword(
-                ChangePasswordRequest(oldPassword, newPassword, newPasswordConfirmation)
+                ChangePasswordRequest(
+                    oldPassword,
+                    newPassword,
+                    newPasswordConfirmation
+                )
             )
             if (!response.success) {
-                return NetworkResult.Error(response.message ?: "خطا در تغییر رمز عبور")
+                return NetworkResult.Error(
+                    response.message
+                            ?: "خطا در تغییر رمز عبور"
+                )
             }
             // پس از تغییر موفق، اطلاعات کاربر را دوباره بگیر
             me()
@@ -96,7 +119,10 @@ class AuthRepository(
             NetworkResult.Success(Unit)
         } catch (e: Exception) {
             // حتی اگر API fail شود، session را پاک کن
-            try { sessionManager.clearSession() } catch (_: Exception) {}
+            try {
+                sessionManager.clearSession()
+            } catch (_: Exception) {
+            }
             NetworkResult.Error(ApiErrorHandler.extractMessage(e))
         }
     }

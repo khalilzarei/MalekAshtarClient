@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
     /** برگشت اپ به فرانت‌گراند — چک فوری پیام‌های جدید */
     override fun onResume() {
         super.onResume()
+        (application as? MalekClientApp)?.container?.connectivity?.refresh()
         (application as? MalekClientApp)?.let { ChatNotificationManager.checkOnForeground(it) }
     }
 

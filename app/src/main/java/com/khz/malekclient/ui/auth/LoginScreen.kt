@@ -78,7 +78,10 @@ fun LoginScreen(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "⚽", fontSize = 56.sp)
+                Text(
+                    text = "⚽",
+                    fontSize = 56.sp
+                )
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = "ورود به حساب",
@@ -100,10 +103,11 @@ fun LoginScreen(
                 GlassTextField(
                     value = nationalCode,
                     onValueChange = { input ->
-                        nationalCode = input.filter { ch -> ch.isDigit() }.take(10)
+                        nationalCode = input.filter { ch -> ch.isDigit() }
+                            .take(11)
                     },
                     label = "کد ملی بازیکن",
-                    placeholder = "مثلاً 09179170917",
+                    placeholder = "۱۰ رقم، مثلاً ۲۳۶۱۰۴۱۴۴۱",
                     keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Next,
                     enabled = state !is LoginUiState.Loading
@@ -155,7 +159,13 @@ fun LoginScreen(
 
                 GlassButton(
                     text = if (state is LoginUiState.Loading) "در حال ورود..." else "ورود",
-                    onClick = { viewModel.login(nationalCode, password) },
+                    onClick = {
+                        viewModel.login(
+                            nationalCode,
+                            password,
+                            rememberMe
+                        )
+                    },
                     enabled = state !is LoginUiState.Loading
                 )
 

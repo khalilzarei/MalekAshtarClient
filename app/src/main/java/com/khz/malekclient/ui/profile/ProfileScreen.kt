@@ -45,15 +45,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.Coil
 import com.khz.malekclient.core.util.DateUtils
 import com.khz.malekclient.core.util.appViewModel
 import com.khz.malekclient.core.util.toPersianDigits
 import com.khz.malekclient.domain.model.Guardian
 import com.khz.malekclient.domain.model.PlayerProfile
+import com.khz.malekclient.ui.components.AvatarCropDialog
 import com.khz.malekclient.ui.components.AvatarView
 import com.khz.malekclient.ui.components.ErrorContent
 import com.khz.malekclient.ui.components.GlassBackground
@@ -66,8 +65,6 @@ import com.khz.malekclient.ui.theme.GoldPrimary
 import com.khz.malekclient.ui.theme.PurplePrimary
 import com.khz.malekclient.ui.theme.RedError
 import com.khz.malekclient.ui.theme.DesignTokens
-import java.io.File
-import java.io.FileOutputStream
 
 @Composable
 fun ProfileScreen(
@@ -76,32 +73,14 @@ fun ProfileScreen(
 ) {
     val viewModel: ProfileViewModel = appViewModel()
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
     val showLogoutDialog = remember { mutableStateOf(false) }
     val localPreviewUri = remember { mutableStateOf<Uri?>(null) }
+    val cropUri = remember { mutableStateOf<Uri?>(null) }
 
-    // Image picker - پیش‌نمایش فوری + آپلود
+    // انتخاب عکس -> باز کردن ادیتور کراپ شبیه تلگرام
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
-            localPreviewUri.value = uri // نمایش فوری
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val file = File(
-                    context.cacheDir,
-                    "avatar_${System.currentTimeMillis()}.jpg"
-                )
-                FileOutputStream(file).use { out ->
-                    inputStream?.copyTo(out)
-                }
-                // پاک کردن کش Coil برای آواتار قبلی تا عکس جدید لود شود
-                try {
-                    Coil.imageLoader(context).memoryCache?.clear()
-                } catch (_: Exception) {
-                }
-                viewModel.uploadAvatar(file)
-            } catch (e: Exception) {
-                // ignore
-            }
+            cropUri.value = uri
         }
     }
 
@@ -109,20 +88,16 @@ fun ProfileScreen(
         if (state.loggedOut) onLoggedOut()
     }
 
-    // بعد از موفقیت آپلود، کش را پاک کن و پیش‌نمایش لوکال را نگه دار تا URL جدید بیاید
+    // وقتی URL جدید از سرور آمد، پیش‌نمایش لوکال را پاک می‌کنیم تا URL سرور نمایش داده شود
     LaunchedEffect(
         state.profile?.player?.avatarUrl,
         state.profile?.user?.avatarUrl
     ) {
-        // وقتی URL جدید از سرور آمد، پیش‌نمایش لوکال را پاک می‌کنیم تا URL سرور نمایش داده شود
-        if (state.profile != null && !state.uploading) {
-            // کمی تاخیر برای اطمینان از لود عکس جدید
-            // localPreviewUri.value = null // نگه می‌داریم تا مطمئن شویم URL جدید لود شده
-            // اگر URL جدید وجود دارد، کش را پاک کن
-            try {
-                Coil.imageLoader(context).memoryCache?.clear()
-            } catch (_: Exception) {
-            }
+        if (state.profile != null && !state.uploading && localPreviewUri.value != null) {
+            // URL جدید رسیده — پیش‌نمایش لوکال دیگر لازم نیست
+            // (Coil به‌طور خودکار URL جدید را لود می‌کند؛ کش عمومی دست نمی‌زنیم)
+            kotlinx.coroutines.delay(800)
+            localPreviewUri.value = null
         }
     }
 
@@ -288,10 +263,6 @@ fun ProfileScreen(
                                 onPickImage = { imagePicker.launch("image/*") },
                                 onDeleteAvatar = {
                                     localPreviewUri.value = null
-                                    try {
-                                        Coil.imageLoader(context).memoryCache?.clear()
-                                    } catch (_: Exception) {
-                                    }
                                     viewModel.deleteAvatar()
                                 })
                         }
@@ -358,6 +329,18 @@ fun ProfileScreen(
                         }
                     }
                 }
+            }
+
+            // دیالوگ کراپ آواتار — تلگرام/واتساپ استایل (زوم، جابجایی، چرخش)
+            cropUri.value?.let { uri ->
+                AvatarCropDialog(
+                    uri = uri,
+                    onDismiss = { cropUri.value = null },
+                    onConfirm = { file ->
+                        localPreviewUri.value = Uri.fromFile(file)
+                        viewModel.uploadAvatar(file)
+                        cropUri.value = null
+                    })
             }
         }
     }

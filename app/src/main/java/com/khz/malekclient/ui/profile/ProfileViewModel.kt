@@ -3,6 +3,7 @@ package com.khz.malekclient.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.khz.malekclient.core.network.NetworkResult
+import com.khz.malekclient.core.util.InputValidator
 import com.khz.malekclient.data.repository.AuthRepository
 import com.khz.malekclient.data.repository.ClientRepository
 import com.khz.malekclient.domain.model.Guardian
@@ -202,9 +203,14 @@ class ProfileViewModel(
 
     fun saveUser() {
         val s = _state.value
-        if (s.userFullName.isBlank()) {
-            _state.value = s.copy(error = "نام کامل الزامی است"); return
-        }
+        InputValidator.validateFullName(s.userFullName)
+            ?.let { msg ->
+                _state.value = s.copy(error = msg); return
+            }
+        InputValidator.validateMobile(s.userMobile)
+            ?.let { msg ->
+                _state.value = s.copy(error = msg); return
+            }
         _state.value = s.copy(
             saving = true,
             error = null,
@@ -237,9 +243,24 @@ class ProfileViewModel(
         val s = _state.value
         val playerId = s.profile?.player?.id
                 ?: return
-        if (s.playerFirstName.isBlank() || s.playerLastName.isBlank()) {
-            _state.value = s.copy(error = "نام و نام خانوادگی بازیکن الزامی است"); return
-        }
+        InputValidator.validateName(
+            s.playerFirstName,
+            "نام"
+        )
+            ?.let { msg ->
+                _state.value = s.copy(error = msg); return
+            }
+        InputValidator.validateName(
+            s.playerLastName,
+            "نام خانوادگی"
+        )
+            ?.let { msg ->
+                _state.value = s.copy(error = msg); return
+            }
+        InputValidator.validateBirthDate(s.playerBirthDate)
+            ?.let { msg ->
+                _state.value = s.copy(error = msg); return
+            }
         _state.value = s.copy(
             saving = true,
             error = null,
@@ -278,9 +299,21 @@ class ProfileViewModel(
         val s = _state.value
         val gid = s.editingGuardianId
                 ?: return
-        if (s.guardianFullName.isBlank()) {
-            _state.value = s.copy(error = "نام سرپرست الزامی است"); return
-        }
+        InputValidator.validateName(
+            s.guardianFullName,
+            "نام سرپرست"
+        )
+            ?.let { msg ->
+                _state.value = s.copy(error = msg); return
+            }
+        InputValidator.validateMobile(s.guardianMobile)
+            ?.let { msg ->
+                _state.value = s.copy(error = msg); return
+            }
+        InputValidator.validateEmergencyPhone(s.guardianEmergency)
+            ?.let { msg ->
+                _state.value = s.copy(error = msg); return
+            }
         _state.value = s.copy(
             saving = true,
             error = null,
@@ -322,18 +355,26 @@ class ProfileViewModel(
             error = null
         )
         viewModelScope.launch {
-            when (val r = clientRepository.uploadAvatar(file)) {
-                is NetworkResult.Success -> {
-                    _state.value = _state.value.copy(uploading = false)
-                    refresh()
+            try {
+                when (val r = clientRepository.uploadAvatar(file)) {
+                    is NetworkResult.Success -> {
+                        _state.value = _state.value.copy(uploading = false)
+                        refresh()
+                    }
+
+                    is NetworkResult.Error   -> _state.value = _state.value.copy(
+                        uploading = false,
+                        error = r.message
+                    )
+
+                    else                     -> _state.value = _state.value.copy(uploading = false)
                 }
-
-                is NetworkResult.Error   -> _state.value = _state.value.copy(
-                    uploading = false,
-                    error = r.message
-                )
-
-                else                     -> _state.value = _state.value.copy(uploading = false)
+            } finally {
+                // فایل موقت کش حذف شود تا cacheDir پر نشود
+                try {
+                    file.delete()
+                } catch (_: Exception) {
+                }
             }
         }
     }

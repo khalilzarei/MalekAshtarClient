@@ -80,18 +80,19 @@ import java.util.TimeZone
 import kotlin.time.Duration.Companion.milliseconds
 
 private fun chatRoleLabel(role: String?): String {
-    return when (role?.trim()?.lowercase(Locale.ROOT)) {
-        "player", "athlete" -> "بازیکن"
+    return when (role?.trim()
+        ?.lowercase(Locale.ROOT)) {
+        "player", "athlete"                          -> "بازیکن"
         "admin", "administrator", "manager", "owner" -> "مدیر"
-        "coach", "trainer" -> "مربی"
-        "guardian", "parent" -> "سرپرست"
-        "teacher" -> "مربی آموزشی"
-        "accountant" -> "حسابدار"
-        "staff" -> "کادر اجرایی"
-        "director" -> "مدیر فنی"
-        "user" -> "کاربر"
-        null, "" -> "کاربر"
-        else -> role.trim()
+        "coach", "trainer"                           -> "مربی"
+        "guardian", "parent"                         -> "سرپرست"
+        "teacher"                                    -> "مربی آموزشی"
+        "accountant"                                 -> "حسابدار"
+        "staff"                                      -> "کادر اجرایی"
+        "director"                                   -> "مدیر فنی"
+        "user"                                       -> "کاربر"
+        null, ""                                     -> "کاربر"
+        else                                         -> role.trim()
     }
 }
 
@@ -127,7 +128,8 @@ fun ChatScreen(
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
-        currentUserId = sessionManager.userId.first()?.toIntOrNull()
+        currentUserId = sessionManager.userId.first()
+            ?.toIntOrNull()
     }
 
     suspend fun loadRoom() {
@@ -143,7 +145,8 @@ fun ChatScreen(
                     room = result.data
                     currentRoomId = result.data.id
                 }
-                is NetworkResult.Error -> error = result.message
+
+                is NetworkResult.Error   -> error = result.message
                 is NetworkResult.Loading -> Unit
             }
             return
@@ -160,60 +163,86 @@ fun ChatScreen(
                     error = "اطلاعات گفتگو پیدا نشد"
                 }
             }
-            is NetworkResult.Error -> error = result.message
+
+            is NetworkResult.Error   -> error = result.message
             is NetworkResult.Loading -> Unit
         }
     }
 
     suspend fun loadMessages() {
-        val rid = currentRoomId ?: return
-        when (val result = chatRepo.getMessages(roomId = rid, limit = 50)) {
+        val rid = currentRoomId
+                ?: return
+        when (val result = chatRepo.getMessages(
+            roomId = rid,
+            limit = 50
+        )) {
             is NetworkResult.Success -> {
                 messages = result.data
-                result.data.maxOfOrNull { it.id }?.let { lastId ->
-                    chatRepo.markAsRead(rid, lastId)
-                }
+                result.data.maxOfOrNull { it.id }
+                    ?.let { lastId ->
+                        chatRepo.markAsRead(
+                            rid,
+                            lastId
+                        )
+                    }
             }
-            is NetworkResult.Error -> {
+
+            is NetworkResult.Error   -> {
                 if (messages.isEmpty()) error = result.message
             }
+
             is NetworkResult.Loading -> Unit
         }
     }
 
-    LaunchedEffect(roomId, targetUserId) {
+    LaunchedEffect(
+        roomId,
+        targetUserId
+    ) {
         loading = true
         loadRoom()
         loadMessages()
         loading = false
     }
 
+    // پولینگ بهینه: پیام‌ها هر ۵ ثانیه، وضعیت خواندن هر ۱۵ ثانیه
     LaunchedEffect(currentRoomId) {
+        var tick = 0
         while (isActive) {
-            delay(3000.milliseconds)
-            val rid = currentRoomId ?: continue
-            when (val result = chatRepo.getMessages(roomId = rid, limit = 50)) {
+            delay(5000.milliseconds)
+            val rid = currentRoomId
+                    ?: continue
+            when (val result = chatRepo.getMessages(
+                roomId = rid,
+                limit = 50
+            )) {
                 is NetworkResult.Success -> {
-                    val merged = (messages + result.data).distinctBy { it.id }.sortedBy { it.id }
+                    val merged = (messages + result.data).distinctBy { it.id }
+                        .sortedBy { it.id }
                     if (merged != messages) {
                         messages = merged
-                        result.data.maxOfOrNull { it.id }?.let { lastId ->
-                            chatRepo.markAsRead(rid, lastId)
-                        }
+                        result.data.maxOfOrNull { it.id }
+                            ?.let { lastId ->
+                                chatRepo.markAsRead(
+                                    rid,
+                                    lastId
+                                )
+                            }
                     }
                 }
-                is NetworkResult.Error -> Unit
+
+                is NetworkResult.Error   -> Unit
                 is NetworkResult.Loading -> Unit
             }
 
-            /*
-             * به‌روزرسانی اعضای روم (lastReadMessageId)
-             * تا تیک سبز ✓✓ به‌محض خواندنِ طرف مقابل نمایش داده شود.
-             */
-            val roomsResult = chatRepo.rooms()
-            if (roomsResult is NetworkResult.Success) {
-                roomsResult.data.firstOrNull { it.id == rid }
-                    ?.let { room = it }
+            // هر ۳ پول (۱۵ ثانیه) یک‌بار وضعیت lastRead را هم به‌روزرسانی کن
+            tick++
+            if (tick % 3 == 0) {
+                val roomsResult = chatRepo.rooms()
+                if (roomsResult is NetworkResult.Success) {
+                    roomsResult.data.firstOrNull { it.id == rid }
+                        ?.let { room = it }
+                }
             }
         }
     }
@@ -227,40 +256,41 @@ fun ChatScreen(
      *  ✓✓   خاکستری = تحویل‌شده (اپِ طرف مقابل دریافت کرده)
      *  ✓✓   سبز     = خوانده‌شده (آخرین پیام خوانده‌ی طرف ≥ پیام ما)
      */
-    val otherMembers: List<ChatRoomUser> = currentRoom?.users
-        ?.filter { it.id != currentUserId }
+    val otherMembers: List<ChatRoomUser> = currentRoom?.users?.filter { it.id != currentUserId }
         .orEmpty()
 
     fun checkState(msg: ChatMessage): MessageCheckState {
-        val readByAll = otherMembers.isNotEmpty() &&
-                otherMembers.all { it.lastReadMessageId >= msg.id }
+        val readByAll = otherMembers.isNotEmpty() && otherMembers.all { it.lastReadMessageId >= msg.id }
         val delivered = !msg.deliveredAt.isNullOrBlank()
         return when {
             readByAll -> MessageCheckState.READ
             delivered -> MessageCheckState.DELIVERED
-            else -> MessageCheckState.SENT
+            else      -> MessageCheckState.SENT
         }
     }
 
     val roomTitle = if (currentRoom?.isGroup == true) {
-        currentRoom.title.takeIf { it.isNotBlank() } ?: initialTitle ?: "گروه"
+        currentRoom.title.takeIf { it.isNotBlank() }
+                ?: initialTitle
+                ?: "گروه"
     } else {
         otherUser?.fullName?.takeIf { it.isNotBlank() }
                 ?: currentRoom?.title?.takeIf { it.isNotBlank() }
-                ?: initialTitle ?: "گفتگو"
+                ?: initialTitle
+                ?: "گفتگو"
     }
 
     val roomImage = if (currentRoom?.isGroup == true) {
         currentRoom.image?.takeIf { it.isNotBlank() }
     } else {
-        otherUser?.avatar?.takeIf { it.isNotBlank() } ?: currentRoom?.image?.takeIf { it.isNotBlank() }
+        otherUser?.avatar?.takeIf { it.isNotBlank() }
+                ?: currentRoom?.image?.takeIf { it.isNotBlank() }
     }
 
     val roomSubtitle = if (currentRoom?.isGroup == true) {
         "${currentRoom.users.size} عضو"
     } else {
-        otherUser?.role
-            ?.let(::chatRoleLabel)
+        otherUser?.role?.let(::chatRoleLabel)
                 ?: "گفتگوی خصوصی"
     }
 
@@ -276,7 +306,12 @@ fun ChatScreen(
                 val millis = parseUtcToMillis(message.createdAt)
                 val dayStart = millis?.let { localDayStart(it) }
                 if (dayStart != null && dayStart != previousDayStart) {
-                    add(ChatListItem.DayHeader(dayStart, dayLabel(dayStart)))
+                    add(
+                        ChatListItem.DayHeader(
+                            dayStart,
+                            dayLabel(dayStart)
+                        )
+                    )
                     previousDayStart = dayStart
                 }
                 add(ChatListItem.Bubble(message))
@@ -302,27 +337,27 @@ fun ChatScreen(
                                 context,
                                 "شماره تماس ثبت نشده است",
                                 Toast.LENGTH_SHORT
-                            ).show()
+                            )
+                                .show()
                         } else {
                             try {
                                 context.startActivity(
                                     Intent(Intent.ACTION_DIAL).apply {
                                         data = Uri.parse("tel:$phone")
-                                    }
-                                )
+                                    })
                             } catch (_: Exception) {
                                 Toast.makeText(
                                     context,
                                     "برنامه تماس در دسترس نیست",
                                     Toast.LENGTH_SHORT
-                                ).show()
+                                )
+                                    .show()
                             }
                         }
                     },
                     showLock = currentRoom?.isLocked == true
                 )
-            }
-        ) { padding ->
+            }) { padding ->
             Column(
                 modifier = Modifier
                     .padding(padding)
@@ -331,19 +366,26 @@ fun ChatScreen(
             ) {
                 Box(modifier = Modifier.weight(1f)) {
                     when {
-                        loading -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        loading                             -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 CircularProgressIndicator(color = GoldPrimary)
                             }
                         }
+
                         error != null && messages.isEmpty() -> {
                             Box(
-                                modifier = Modifier.fillMaxSize().padding(24.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(24.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
-                                        text = error ?: "خطا در دریافت اطلاعات",
+                                        text = error
+                                                ?: "خطا در دریافت اطلاعات",
                                         color = Color(0xFFFF8A80),
                                         style = MaterialTheme.typography.bodyMedium
                                     )
@@ -356,15 +398,21 @@ fun ChatScreen(
                                                 loadMessages()
                                                 loading = false
                                             }
-                                        }
-                                    ) {
-                                        Text(text = "تلاش مجدد", color = GoldPrimary)
+                                        }) {
+                                        Text(
+                                            text = "تلاش مجدد",
+                                            color = GoldPrimary
+                                        )
                                     }
                                 }
                             }
                         }
-                        messages.isEmpty() -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+
+                        messages.isEmpty()                  -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
                                         text = "هنوز پیامی رد و بدل نشده",
@@ -380,31 +428,32 @@ fun ChatScreen(
                                 }
                             }
                         }
-                        else -> {
+
+                        else                                -> {
                             LazyColumn(
                                 state = listState,
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                contentPadding = PaddingValues(
+                                    horizontal = 12.dp,
+                                    vertical = 8.dp
+                                ),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(
                                     items = chatItems,
                                     key = { item ->
                                         when (item) {
-                                            is ChatListItem.Bubble -> "m" + item.message.id
+                                            is ChatListItem.Bubble    -> "m" + item.message.id
                                             is ChatListItem.DayHeader -> "d" + item.dayStart
                                         }
-                                    }
-                                ) { item ->
+                                    }) { item ->
                                     when (item) {
-                                        is ChatListItem.DayHeader ->
-                                            DateSeparatorHeader(label = item.label)
+                                        is ChatListItem.DayHeader -> DateSeparatorHeader(label = item.label)
 
-                                        is ChatListItem.Bubble -> {
+                                        is ChatListItem.Bubble    -> {
                                             val msg = item.message
                                             val mine = msg.senderId == currentUserId
-                                            val checks =
-                                                if (mine) checkState(msg) else MessageCheckState.NONE
+                                            val checks = if (mine) checkState(msg) else MessageCheckState.NONE
 
                                             MessageBubble(
                                                 message = msg,
@@ -423,10 +472,12 @@ fun ChatScreen(
                 }
 
                 when {
-                    currentRoomId == null -> Unit
+                    currentRoomId == null         -> Unit
                     currentRoom?.isLocked == true -> {
                         GlassCard3D(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -447,36 +498,52 @@ fun ChatScreen(
                             }
                         }
                     }
-                    else -> {
+
+                    else                          -> {
                         MessageInputBar(
                             text = messageText,
                             onTextChange = { messageText = it },
                             sending = sending,
                             onSend = {
                                 if (messageText.isBlank() || sending) return@MessageInputBar
-                                val rid = currentRoomId ?: return@MessageInputBar
+                                val rid = currentRoomId
+                                        ?: return@MessageInputBar
                                 val text = messageText.trim()
                                 scope.launch {
                                     sending = true
                                     try {
-                                        when (val result = chatRepo.sendMessage(rid, text)) {
+                                        when (val result = chatRepo.sendMessage(
+                                            rid,
+                                            text
+                                        )) {
                                             is NetworkResult.Success -> {
                                                 messages = (messages + result.data).distinctBy { it.id }
                                                 messageText = ""
                                             }
-                                            is NetworkResult.Error -> {
-                                                Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+
+                                            is NetworkResult.Error   -> {
+                                                Toast.makeText(
+                                                    context,
+                                                    result.message,
+                                                    Toast.LENGTH_SHORT
+                                                )
+                                                    .show()
                                             }
+
                                             is NetworkResult.Loading -> Unit
                                         }
                                     } catch (_: Exception) {
-                                        Toast.makeText(context, "ارسال پیام ناموفق بود", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "ارسال پیام ناموفق بود",
+                                            Toast.LENGTH_SHORT
+                                        )
+                                            .show()
                                     } finally {
                                         sending = false
                                     }
                                 }
-                            }
-                        )
+                            })
                     }
                 }
             }
@@ -502,9 +569,19 @@ private fun MessageBubble(
     checkState: MessageCheckState = MessageCheckState.NONE
 ) {
     val shape = if (isMine) {
-        RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)
+        RoundedCornerShape(
+            18.dp,
+            18.dp,
+            4.dp,
+            18.dp
+        )
     } else {
-        RoundedCornerShape(18.dp, 18.dp, 18.dp, 4.dp)
+        RoundedCornerShape(
+            18.dp,
+            18.dp,
+            18.dp,
+            4.dp
+        )
     }
 
     val bgBrush = if (isMine) {
@@ -532,7 +609,8 @@ private fun MessageBubble(
         ) {
             if (!isMine) {
                 AvatarView(
-                    name = message.senderName ?: "?",
+                    name = message.senderName
+                            ?: "?",
                     avatarUrl = message.senderAvatar,
                     size = 32.dp,
                     accentColor = Color(0xFF4FC3F7)
@@ -543,13 +621,20 @@ private fun MessageBubble(
             Box(
                 modifier = Modifier
                     .widthIn(max = 300.dp)
-                    .background(brush = bgBrush, shape = shape)
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .background(
+                        brush = bgBrush,
+                        shape = shape
+                    )
+                    .padding(
+                        horizontal = 14.dp,
+                        vertical = 10.dp
+                    )
             ) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     Column {
                         Text(
-                            text = message.body ?: "",
+                            text = message.body
+                                    ?: "",
                             color = if (isMine) Color(0xFF1A0533) else Color.White,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -578,10 +663,10 @@ private fun MessageBubble(
                                         Icons.Filled.DoneAll
                                     },
                                     contentDescription = when (checkState) {
-                                        MessageCheckState.SENT -> "ارسال‌شده"
+                                        MessageCheckState.SENT      -> "ارسال‌شده"
                                         MessageCheckState.DELIVERED -> "تحویل‌شده"
-                                        MessageCheckState.READ -> "خوانده‌شده"
-                                        MessageCheckState.NONE -> null
+                                        MessageCheckState.READ      -> "خوانده‌شده"
+                                        MessageCheckState.NONE      -> null
                                     },
                                     tint = if (checkState == MessageCheckState.READ) {
                                         Color(0xFF007A33)
@@ -609,13 +694,58 @@ private fun MessageInputBar(
     var emojiOpen by remember { mutableStateOf(false) }
     val emojis = remember {
         listOf(
-            "😀", "😂", "😍", "🥰", "😎", "😊", "😉", "😢", "😡",
-            "👍", "👏", "🙏", "🔥", "❤️", "🎉",
-            "⚽", "🏀", "🏈", "⚾", "🎾", "🏐", "🏉", "🥏",
-            "🎱", "🏓", "🏸", "🥅", "🏒", "🏑", "🥍", "🏏",
-            "⛳", "🏹", "🎣", "🤿", "🥊", "🥋", "🛹", "🛼",
-            "⛸️", "🏂", "🪂", "🏋️‍♂️", "🤼‍♂️", "🤸‍♂️", "🤾‍♂️",
-            "🏌️‍♂️", "🏇", "🚴‍♂️", "🚵‍♂️", "🏊‍♂️", "🧗‍♂️"
+            "😀",
+            "😂",
+            "😍",
+            "🥰",
+            "😎",
+            "😊",
+            "😉",
+            "😢",
+            "😡",
+            "👍",
+            "👏",
+            "🙏",
+            "🔥",
+            "❤️",
+            "🎉",
+            "⚽",
+            "🏀",
+            "🏈",
+            "⚾",
+            "🎾",
+            "🏐",
+            "🏉",
+            "🥏",
+            "🎱",
+            "🏓",
+            "🏸",
+            "🥅",
+            "🏒",
+            "🏑",
+            "🥍",
+            "🏏",
+            "⛳",
+            "🏹",
+            "🎣",
+            "🤿",
+            "🥊",
+            "🥋",
+            "🛹",
+            "🛼",
+            "⛸️",
+            "🏂",
+            "🪂",
+            "🏋️‍♂️",
+            "🤼‍♂️",
+            "🤸‍♂️",
+            "🤾‍♂️",
+            "🏌️‍♂️",
+            "🏇",
+            "🚴‍♂️",
+            "🚵‍♂️",
+            "🏊‍♂️",
+            "🧗‍♂️"
         )
     }
     val inputShape = RoundedCornerShape(26.dp)
@@ -623,7 +753,10 @@ private fun MessageInputBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .padding(
+                horizontal = 8.dp,
+                vertical = 6.dp
+            )
     ) {
         if (emojiOpen) {
             Box(
@@ -637,7 +770,10 @@ private fun MessageInputBar(
                         color = Color.White.copy(alpha = 0.09f),
                         shape = RoundedCornerShape(20.dp)
                     )
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(
+                        horizontal = 8.dp,
+                        vertical = 4.dp
+                    )
             ) {
                 Row(
                     modifier = Modifier
@@ -656,8 +792,7 @@ private fun MessageInputBar(
                                     onTextChange(text + emoji)
                                     emojiOpen = false
                                 }
-                                .padding(7.dp)
-                        )
+                                .padding(7.dp))
                     }
                 }
             }
@@ -679,7 +814,10 @@ private fun MessageInputBar(
                             color = Color.White.copy(alpha = 0.10f),
                             shape = inputShape
                         )
-                        .padding(start = 12.dp, end = 2.dp)
+                        .padding(
+                            start = 12.dp,
+                            end = 2.dp
+                        )
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize(),
@@ -742,13 +880,11 @@ private fun MessageInputBar(
                         )
                         .then(
                             if (text.isNotBlank() && !sending) {
-                                Modifier.clickable { onSend() }
-                            } else {
-                                Modifier
-                            }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
+                            Modifier.clickable { onSend() }
+                        } else {
+                            Modifier
+                        }),
+                    contentAlignment = Alignment.Center) {
                     if (sending) {
                         CircularProgressIndicator(
                             color = Color.White,
@@ -775,7 +911,10 @@ private fun MessageInputBar(
 
 sealed class ChatListItem {
     data class Bubble(val message: ChatMessage) : ChatListItem()
-    data class DayHeader(val dayStart: Long, val label: String) : ChatListItem()
+    data class DayHeader(
+        val dayStart: Long,
+        val label: String
+    ) : ChatListItem()
 }
 
 /** خط جداکننده‌ی تاریخ روز — مثل تلگرام/واتساپ */
@@ -794,7 +933,10 @@ private fun DateSeparatorHeader(label: String) {
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color.White.copy(alpha = 0.08f))
-                .padding(horizontal = 14.dp, vertical = 5.dp)
+                .padding(
+                    horizontal = 14.dp,
+                    vertical = 5.dp
+                )
         )
     }
 }
@@ -812,11 +954,15 @@ private val UTC_PATTERNS = listOf(
 
 /** پارس کردن created_at سروری (UTC) به millis — اگر نشد، null */
 private fun parseUtcToMillis(raw: String?): Long? {
-    val value = raw?.trim().orEmpty()
+    val value = raw?.trim()
+        .orEmpty()
     if (value.isEmpty()) return null
 
     for (pattern in UTC_PATTERNS) {
-        val sdf = SimpleDateFormat(pattern, Locale.US)
+        val sdf = SimpleDateFormat(
+            pattern,
+            Locale.US
+        )
         sdf.timeZone = TimeZone.getTimeZone("UTC")
         val parsed = try {
             sdf.parse(value)
@@ -832,8 +978,10 @@ private fun parseUtcToMillis(raw: String?): Long? {
 private fun formatTimeLocal(millis: Long?): String {
     if (millis == null) return ""
     return try {
-        SimpleDateFormat("HH:mm", Locale.getDefault())
-            .format(Date(millis))
+        SimpleDateFormat(
+            "HH:mm",
+            Locale.getDefault()
+        ).format(Date(millis))
             .toPersianDigits()
     } catch (_: Exception) {
         ""
@@ -844,10 +992,22 @@ private fun formatTimeLocal(millis: Long?): String {
 private fun localDayStart(instantMillis: Long): Long {
     val cal = Calendar.getInstance()
     cal.timeInMillis = instantMillis
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
+    cal.set(
+        Calendar.HOUR_OF_DAY,
+        0
+    )
+    cal.set(
+        Calendar.MINUTE,
+        0
+    )
+    cal.set(
+        Calendar.SECOND,
+        0
+    )
+    cal.set(
+        Calendar.MILLISECOND,
+        0
+    )
     return cal.timeInMillis
 }
 
@@ -866,20 +1026,38 @@ private fun dayLabel(dayStart: Long): String {
 
     val yesterdayCal = Calendar.getInstance()
     yesterdayCal.timeInMillis = todayStart
-    yesterdayCal.add(Calendar.DAY_OF_MONTH, -1)
-    yesterdayCal.set(Calendar.HOUR_OF_DAY, 0)
-    yesterdayCal.set(Calendar.MINUTE, 0)
-    yesterdayCal.set(Calendar.SECOND, 0)
-    yesterdayCal.set(Calendar.MILLISECOND, 0)
+    yesterdayCal.add(
+        Calendar.DAY_OF_MONTH,
+        -1
+    )
+    yesterdayCal.set(
+        Calendar.HOUR_OF_DAY,
+        0
+    )
+    yesterdayCal.set(
+        Calendar.MINUTE,
+        0
+    )
+    yesterdayCal.set(
+        Calendar.SECOND,
+        0
+    )
+    yesterdayCal.set(
+        Calendar.MILLISECOND,
+        0
+    )
     val yesterdayStart = yesterdayCal.timeInMillis
 
     return when (dayStart) {
-        todayStart -> "امروز"
+        todayStart     -> "امروز"
         yesterdayStart -> "دیروز"
-        else -> {
+        else           -> {
             // تاریخ شمسی (مثلاً 26 شهریور 1405) — با DateUtils موجود در پروژه
             val gregorian = try {
-                SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(dayStart))
+                SimpleDateFormat(
+                    "yyyy-MM-dd",
+                    Locale.US
+                ).format(Date(dayStart))
             } catch (_: Exception) {
                 ""
             }

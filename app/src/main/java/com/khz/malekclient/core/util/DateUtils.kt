@@ -367,19 +367,41 @@ object DateUtils {
         } $monthName"
     }
 
-    /** محاسبه‌ی سن از تاریخ تولد (رشته YYYY-MM-DD میلادی) */
+    /** محاسبه‌ی سن از تاریخ تولد (رشته YYYY-MM-DD میلادی) — با درنظر گرفتن ماه و روز */
     fun calculateAge(birthDate: String?): Int? {
-        val j = gregorianDateStringToJalali(birthDate)
-                ?: return null
-        val (jy, _, _) = j
-        val today = gregorianDateStringToJalali(
-            SimpleDateFormat(
+        if (birthDate.isNullOrBlank()) return null
+        return try {
+            val sdf = SimpleDateFormat(
                 "yyyy-MM-dd",
                 Locale.US
-            ).format(Date())
-        )
-                ?: return null
-        return today.first - jy
+            )
+            val birth = sdf.parse(birthDate.take(10))
+                    ?: return null
+            val today = Date()
+            val calBirth = Calendar.getInstance()
+                .apply { time = birth }
+            val calToday = Calendar.getInstance()
+                .apply { time = today }
+            var age = calToday.get(Calendar.YEAR) - calBirth.get(Calendar.YEAR)
+            // اگر امسال هنوز تولد نرسیده، یک سال کم کن
+            if (calToday.get(Calendar.MONTH) < calBirth.get(Calendar.MONTH) || (calToday.get(Calendar.MONTH) == calBirth.get(Calendar.MONTH) && calToday.get(Calendar.DAY_OF_MONTH) < calBirth.get(Calendar.DAY_OF_MONTH))) {
+                age--
+            }
+            if (age < 0) null else age
+        } catch (_: Exception) {
+            // fallback: همان منطق سال شمسی (تقریبی)
+            val j = gregorianDateStringToJalali(birthDate)
+                    ?: return null
+            val (jy, _, _) = j
+            val today = gregorianDateStringToJalali(
+                SimpleDateFormat(
+                    "yyyy-MM-dd",
+                    Locale.US
+                ).format(Date())
+            )
+                    ?: return null
+            today.first - jy
+        }
     }
 
     /** نام روز هفته از تاریخ YYYY-MM-DD میلادی (مثلاً شنبه) */
@@ -508,8 +530,24 @@ object DateUtils {
         )
     }
 
-    /** تبدیل میلادی YYYY-MM-DD به شمسی YYYY/MM/DD - کپی از اپ ادمین */
+    /** تبدیل میلادی YYYY-MM-DD به شمسی YYYY/MM/DD — اکنون به پیاده‌سازی دقیق JDN واگذار شده */
     fun gregorianToJalali(gregorianDate: String): String {
+        val jalali = gregorianDateStringToJalali(
+            gregorianDate.trim()
+                .take(10)
+        )
+                ?: return ""
+        return String.format(
+            Locale.US,
+            "%04d/%02d/%02d",
+            jalali.first,
+            jalali.second,
+            jalali.third
+        )
+    }
+
+    /** @deprecated منطق تکراری — برای سازگاری نگه داشته شد؛ از gregorianToJalali(String) استفاده کنید */
+    private fun gregorianToJalaliLegacy(gregorianDate: String): String {
         return try {
             val parts = gregorianDate.trim()
                 .split("-")

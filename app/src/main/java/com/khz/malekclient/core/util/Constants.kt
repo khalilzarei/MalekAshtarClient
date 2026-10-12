@@ -6,13 +6,13 @@ package com.khz.malekclient.core.util
 object Constants {
 
     const val BASE_URL = "https://api.malekashtarkaz.ir/api/v1/"
-    
+
     const val STORAGE_URL = "https://api.malekashtarkaz.ir/"
 
-    /** Timeouts (بر حسب ثانیه) */
-    const val CONNECT_TIMEOUT = 30L
-    const val READ_TIMEOUT = 60L
-    const val WRITE_TIMEOUT = 30L
+    /** Timeouts (بر حسب ثانیه) — کوتاه نگه داشته شد تا کاربر سریع خطا ببیند */
+    const val CONNECT_TIMEOUT = 10L
+    const val READ_TIMEOUT = 30L
+    const val WRITE_TIMEOUT = 15L
 
     /** نقش‌های کاربری */
     const val ROLE_PLAYER = "player"

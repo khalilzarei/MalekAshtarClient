@@ -3,6 +3,7 @@ package com.khz.malekclient.ui.dashboard
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
 import com.khz.malekclient.core.util.DateUtils
 import com.khz.malekclient.core.local.SessionManager
 import com.khz.malekclient.core.network.NetworkResult
@@ -32,12 +33,18 @@ class DashboardViewModel(
 
     private val _state = MutableStateFlow(DashboardUiState())
     val state: StateFlow<DashboardUiState> = _state.asStateFlow()
+    private val gson = Gson()
+    private var lastRefreshAt = 0L
 
     init {
         refresh()
     }
 
-    fun refresh() {
+    fun refresh(force: Boolean = false) {
+        // جلوگیری از فراخوانی دوبله هنگام init + LaunchedEffect هم‌زمان (800ms debounce)
+        val now = System.currentTimeMillis()
+        if (!force && now - lastRefreshAt < 800) return
+        lastRefreshAt = now
         _state.value = _state.value.copy(
             loading = true,
             error = null
@@ -70,8 +77,10 @@ class DashboardViewModel(
                     )
                 }
                 val upcoming = allSessions?.filter {
-                    isUpcoming(it.sessionDate, it.startTime) &&
-                            (it.status == "scheduled" || it.status == "makeup" || it.status == "cancelled" || it.status == null)
+                    isUpcoming(
+                        it.sessionDate,
+                        it.startTime
+                    ) && (it.status == "scheduled" || it.status == "makeup" || it.status == "cancelled" || it.status == null)
                 }
                     ?.sortedWith(
                         compareBy(
@@ -93,18 +102,83 @@ class DashboardViewModel(
                         ?: 0L
                 val shouldShowDebtDialog = currentDebt > 0 && !previous.debtDialogShown
 
-                _state.value = previous.copy(
-                    loading = false,
-                    user = (user as? NetworkResult.Success)?.data,
-                    child = firstChild,
-                    finance = finance,
-                    upcoming = upcoming,
-                    recentNews = recent,
-                    unreadChats = 0,
-                    showDebtDialog = if (shouldShowDebtDialog) true else previous.showDebtDialog,
-                    debtDialogShown = if (shouldShowDebtDialog) true else previous.debtDialogShown,
-                    error = if (user is NetworkResult.Error && children is NetworkResult.Error && schedule is NetworkResult.Error && news is NetworkResult.Error) user.message else null
-                )
+                // خطا فقط وقتی نمایش داده می‌شود که هیچ داده‌ای برای نمایش نداریم (حالت خالی)
+                val hasAnyData = firstChild != null || recent.isNotEmpty() || upcoming.isNotEmpty()
+                val firstError = (user as? NetworkResult.Error)?.message
+                        ?: (children as? NetworkResult.Error)?.message
+                        ?: (schedule as? NetworkResult.Error)?.message
+                        ?: (news as? NetworkResult.Error)?.message
+
+                if (hasAnyData) {
+                    val newState = previous.copy(
+                        loading = false,
+                        user = (user as? NetworkResult.Success)?.data,
+                        child = firstChild,
+                        finance = finance,
+                        upcoming = upcoming,
+                        recentNews = recent,
+                        unreadChats = 0,
+                        isFromCache = false,
+                        showDebtDialog = if (shouldShowDebtDialog) true else previous.showDebtDialog,
+                        debtDialogShown = if (shouldShowDebtDialog) true else previous.debtDialogShown,
+                        error = null
+                    )
+                    _state.value = newState
+                    // ذخیره‌ی کش آفلاین (بی‌صدا)
+                    try {
+                        sessionManager.saveDashboardCache(gson.toJson(newState))
+                    } catch (_: Exception) {
+                    }
+                } else {
+                    // هیچ داده‌ای نداریم — سعی کن کش آفلاین را نشان بده
+                    val cachedJson = try {
+                        sessionManager.getDashboardCache()
+                    } catch (_: Exception) {
+                        null
+                    }
+                    if (!cachedJson.isNullOrBlank()) {
+                        try {
+                            val cached = gson.fromJson(
+                                cachedJson,
+                                DashboardUiState::class.java
+                            )
+                            _state.value = cached.copy(
+                                loading = false,
+                                isFromCache = true,
+                                showDebtDialog = false,
+                                error = firstError
+                            )
+                        } catch (_: Exception) {
+                            _state.value = previous.copy(
+                                loading = false,
+                                user = (user as? NetworkResult.Success)?.data,
+                                child = firstChild,
+                                finance = finance,
+                                upcoming = upcoming,
+                                recentNews = recent,
+                                unreadChats = 0,
+                                isFromCache = false,
+                                showDebtDialog = if (shouldShowDebtDialog) true else previous.showDebtDialog,
+                                debtDialogShown = if (shouldShowDebtDialog) true else previous.debtDialogShown,
+                                error = firstError
+                            )
+                        }
+                    } else {
+                        _state.value = previous.copy(
+                            loading = false,
+                            user = (user as? NetworkResult.Success)?.data,
+                            child = firstChild,
+                            finance = finance,
+                            upcoming = upcoming,
+                            recentNews = recent,
+                            unreadChats = 0,
+                            isFromCache = false,
+                            showDebtDialog = if (shouldShowDebtDialog) true else previous.showDebtDialog,
+                            debtDialogShown = if (shouldShowDebtDialog) true else previous.debtDialogShown,
+                            error = firstError
+                        )
+                    }
+                }
             }
         }
     }
@@ -113,14 +187,21 @@ class DashboardViewModel(
         _state.value = _state.value.copy(showDebtDialog = false)
     }
 
-    private fun isUpcoming(sessionDate: String, startTime: String): Boolean {
+    private fun isUpcoming(
+        sessionDate: String,
+        startTime: String
+    ): Boolean {
         if (sessionDate.isBlank()) return false
         val today = DateUtils.todayGregorian()
         if (sessionDate > today) return true
         if (sessionDate < today) return false
 
-        val now = SimpleDateFormat("HH:mm", Locale.US).format(Date())
-        return startTime.take(5).let { it.length == 5 && it >= now }
+        val now = SimpleDateFormat(
+            "HH:mm",
+            Locale.US
+        ).format(Date())
+        return startTime.take(5)
+            .let { it.length == 5 && it >= now }
     }
 
     suspend fun clearSession() {

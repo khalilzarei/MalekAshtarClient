@@ -24,13 +24,17 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +67,7 @@ import com.khz.malekclient.ui.theme.BlueAccent
 import com.khz.malekclient.ui.theme.GoldPrimary
 import com.khz.malekclient.ui.theme.PurplePrimary
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsListScreen(
     onBack: () -> Unit,
@@ -75,6 +80,12 @@ fun NewsListScreen(
     val container = LocalAppContainer
     val token by produceState<String?>(initialValue = null) {
         value = container.sessionManager.getTokenSync()
+    }
+
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullState = rememberPullToRefreshState()
+    LaunchedEffect(state) {
+        if (state is ListState.Success || state is ListState.Error) isRefreshing = false
     }
 
     val filteredItems = remember(
@@ -129,74 +140,81 @@ fun NewsListScreen(
                     )
                 }
 
-                when (state) {
-                    is ListState.Loading -> {
-                        Box(
-                            Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = GoldPrimary)
-                        }
-                    }
-
-                    is ListState.Error   -> {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    (state as ListState.Error).message,
-                                    color = Color(0xFFFF8A80),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(Modifier.height(12.dp))
-                                TextButton(onClick = { viewModel.refresh() }) {
-                                    Text(
-                                        "تلاش مجدد",
-                                        color = GoldPrimary
-                                    )
-                                }
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = { isRefreshing = true; viewModel.refresh() },
+                    state = pullState,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    when (state) {
+                        is ListState.Loading -> {
+                            Box(
+                                Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = GoldPrimary)
                             }
                         }
-                    }
 
-                    is ListState.Success -> {
-                        if (filteredItems.isEmpty()) {
+                        is ListState.Error   -> {
                             Box(
                                 Modifier
                                     .fillMaxSize()
                                     .padding(24.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    if (query.isBlank()) "خبری برای نمایش وجود ندارد" else "نتیجه‌ای یافت نشد",
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(
-                                    horizontal = 16.dp,
-                                    vertical = 12.dp
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(
-                                    filteredItems,
-                                    key = { it.id }) { news ->
-                                    NewsRow(
-                                        news = news,
-                                        token = token
-                                    ) {
-                                        onNewsClick(news.id)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        (state as ListState.Error).message,
+                                        color = Color(0xFFFF8A80),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    TextButton(onClick = { viewModel.refresh() }) {
+                                        Text(
+                                            "تلاش مجدد",
+                                            color = GoldPrimary
+                                        )
                                     }
                                 }
-                                item { Spacer(Modifier.height(80.dp)) }
+                            }
+                        }
+
+                        is ListState.Success -> {
+                            if (filteredItems.isEmpty()) {
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        if (query.isBlank()) "خبری برای نمایش وجود ندارد" else "نتیجه‌ای یافت نشد",
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(
+                                        horizontal = 16.dp,
+                                        vertical = 12.dp
+                                    ),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(
+                                        filteredItems,
+                                        key = { it.id }) { news ->
+                                        NewsRow(
+                                            news = news,
+                                            token = token
+                                        ) {
+                                            onNewsClick(news.id)
+                                        }
+                                    }
+                                    item { Spacer(Modifier.height(80.dp)) }
+                                }
                             }
                         }
                     }

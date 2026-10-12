@@ -185,13 +185,11 @@ private fun NewsDetailContent(
     }
 
     fun startDownload(media: NewsMedia) {
-        when (
-            val result = NewsMediaDownloader.download(
-                context = context,
-                media = media,
-                token = token
-            )
-        ) {
+        when (val result = NewsMediaDownloader.download(
+            context = context,
+            media = media,
+            token = token
+        )) {
             is NewsMediaDownloader.Result.Started -> {
                 downloadIds[media.id] = result.id
                 downloadProgress[media.id] = -1
@@ -199,11 +197,10 @@ private fun NewsDetailContent(
                 activeDownloadId = result.id
                 completedDownloadId = null
                 downloadFailed = false
-                statusMessage =
-                    "دانلود «${media.displayName}» شروع شد"
+                statusMessage = "دانلود «${media.displayName}» شروع شد"
             }
 
-            is NewsMediaDownloader.Result.Failed -> {
+            is NewsMediaDownloader.Result.Failed  -> {
                 statusMessage = result.message
                 downloadDialogMedia = media
                 activeDownloadId = null
@@ -213,10 +210,10 @@ private fun NewsDetailContent(
         }
     }
 
-    // DownloadManager درصد واقعی دانلود را گزارش می‌کند؛ بنابراین
-    // نوار داخل خبر با وضعیت notification سیستم هماهنگ می‌ماند.
-    LaunchedEffect(Unit) {
-        while (isActive) {
+    // DownloadManager درصد واقعی دانلود را گزارش می‌کند؛
+    // فقط وقتی دانلود فعال است پول می‌کند (صرفه‌جویی باتری)
+    LaunchedEffect(downloadIds.size) {
+        while (isActive && downloadIds.isNotEmpty()) {
             downloadIds.toMap()
                 .forEach { (mediaId, downloadId) ->
                     val cursor = downloadManager.query(
@@ -300,22 +297,36 @@ private fun NewsDetailContent(
     }
 
     fun openDownloadedMedia() {
-        val media = downloadDialogMedia ?: return
-        val downloadId = completedDownloadId ?: return
+        val media = downloadDialogMedia
+                ?: return
+        val downloadId = completedDownloadId
+                ?: return
         try {
             val uri = downloadManager.getUriForDownloadedFile(downloadId)
                     ?: throw IllegalStateException("فایل دانلودشده پیدا نشد")
-            val extension = (media.originalName ?: media.fileName)
-                .orEmpty()
-                .substringAfterLast('.', "")
+            val extension = (media.originalName
+                    ?: media.fileName).orEmpty()
+                .substringAfterLast(
+                    '.',
+                    ""
+                )
             val mimeType = media.mimeType.takeIf { it.isNotBlank() }
-                    ?: MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
+                    ?: MimeTypeMap.getSingleton()
+                        .getMimeTypeFromExtension(extension.lowercase())
                     ?: if (media.isVideo) "video/*" else "image/*"
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, mimeType)
+                setDataAndType(
+                    uri,
+                    mimeType
+                )
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "باز کردن رسانه"))
+            context.startActivity(
+                Intent.createChooser(
+                    intent,
+                    "باز کردن رسانه"
+                )
+            )
             downloadDialogMedia = null
             activeDownloadId = null
             completedDownloadId = null
@@ -614,7 +625,8 @@ private fun NewsDetailContent(
     }
 
     downloadDialogMedia?.let { media ->
-        val progress = downloadProgress[media.id] ?: -1
+        val progress = downloadProgress[media.id]
+                ?: -1
         AlertDialog(
             onDismissRequest = {
                 if (completedDownloadId != null || downloadFailed) {
@@ -630,12 +642,13 @@ private fun NewsDetailContent(
                     Text(media.displayName)
                     when {
                         completedDownloadId != null -> Text("فایل آماده‌ی مشاهده است.")
-                        downloadFailed -> Text("دانلود فایل انجام نشد. دوباره تلاش کنید.")
-                        progress < 0 -> LinearProgressIndicator(
+                        downloadFailed              -> Text("دانلود فایل انجام نشد. دوباره تلاش کنید.")
+                        progress < 0                -> LinearProgressIndicator(
                             modifier = Modifier.fillMaxWidth(),
                             color = GoldPrimary
                         )
-                        else -> {
+
+                        else                        -> {
                             LinearProgressIndicator(
                                 progress = { progress / 100f },
                                 modifier = Modifier.fillMaxWidth(),
@@ -649,14 +662,22 @@ private fun NewsDetailContent(
             confirmButton = {
                 if (completedDownloadId != null) {
                     TextButton(onClick = ::openDownloadedMedia) {
-                        Text("مشاهده‌ی رسانه", color = GoldPrimary)
+                        Text(
+                            "مشاهده‌ی رسانه",
+                            color = GoldPrimary
+                        )
                     }
                 } else if (downloadFailed) {
                     TextButton(onClick = {
                         downloadDialogMedia = null
                         activeDownloadId = null
                         downloadFailed = false
-                    }) { Text("بستن", color = GoldPrimary) }
+                    }) {
+                        Text(
+                            "بستن",
+                            color = GoldPrimary
+                        )
+                    }
                 }
             },
             dismissButton = {
@@ -666,7 +687,12 @@ private fun NewsDetailContent(
                         activeDownloadId = null
                         completedDownloadId = null
                         downloadProgress.remove(media.id)
-                    }) { Text("بعداً", color = Color.White.copy(alpha = 0.7f)) }
+                    }) {
+                        Text(
+                            "بعداً",
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             },
             containerColor = Color(0xFF241040)

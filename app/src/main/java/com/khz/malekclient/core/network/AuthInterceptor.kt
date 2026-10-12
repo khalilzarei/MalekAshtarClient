@@ -17,18 +17,29 @@ class AuthInterceptor(private val sessionManager: SessionManager) : Interceptor 
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
 
-        val token = runBlocking {
-            sessionManager.getTokenSync()
-        }
+        // اول کش حافظه‌ای (بدون I/O)، اگر نبود از DataStore بخوان
+        val token = sessionManager.peekToken()
+                ?: runBlocking {
+                    sessionManager.getTokenSync()
+                }
 
         val request = if (!token.isNullOrBlank()) {
             original.newBuilder()
-                .header("Authorization", "Bearer $token")
-                .header("Accept", "application/json")
+                .header(
+                    "Authorization",
+                    "Bearer $token"
+                )
+                .header(
+                    "Accept",
+                    "application/json"
+                )
                 .build()
         } else {
             original.newBuilder()
-                .header("Accept", "application/json")
+                .header(
+                    "Accept",
+                    "application/json"
+                )
                 .build()
         }
 

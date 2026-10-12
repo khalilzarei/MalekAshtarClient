@@ -51,7 +51,15 @@ class ConnectivityMonitor(context: Context) {
     val state: StateFlow<NetState> = _state
 
     /** وضعیت فعلی (فوری) */
-    fun current(): NetState = _state.value
+    fun current(): NetState {
+        refresh()
+        return _state.value
+    }
+
+    /** در بازگشت اپ به پیش‌زمینه وضعیت شبکه ممکن است از آخرین callback قدیمی‌تر باشد. */
+    fun refresh() {
+        evaluate()
+    }
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {

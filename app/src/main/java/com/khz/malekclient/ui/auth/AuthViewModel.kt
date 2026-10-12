@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.khz.malekclient.core.local.SessionManager
 import com.khz.malekclient.core.network.NetworkResult
 import com.khz.malekclient.core.util.Constants
+import com.khz.malekclient.core.util.InputValidator
 import com.khz.malekclient.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,14 +30,27 @@ class AuthViewModel(
     val changePasswordState: StateFlow<ChangePasswordUiState> = _changePasswordState.asStateFlow()
 
     /** تلاش برای ورود */
-    fun login(identifier: String, password: String) {
+    fun login(
+        identifier: String,
+        password: String,
+        rememberMe: Boolean = true
+    ) {
         if (identifier.isBlank() || password.isBlank()) {
             _loginState.value = LoginUiState.Error("کد ملی و رمز عبور را وارد کنید")
             return
         }
+        InputValidator.validateLoginIdentifier(identifier)
+            ?.let { msg ->
+                _loginState.value = LoginUiState.Error(msg)
+                return
+            }
         _loginState.value = LoginUiState.Loading
         viewModelScope.launch {
-            when (val r = authRepository.login(identifier.trim(), password)) {
+            when (val r = authRepository.login(
+                identifier.trim(),
+                password,
+                rememberMe
+            )) {
                 is NetworkResult.Success -> {
                     val u = r.data.user
                     if (u.role != Constants.ROLE_PLAYER) {
@@ -47,28 +61,37 @@ class AuthViewModel(
                         _loginState.value = LoginUiState.Success(u)
                     }
                 }
-                is NetworkResult.Error -> _loginState.value = LoginUiState.Error(r.message)
-                is NetworkResult.Loading -> { /* never happens here */ }
+
+                is NetworkResult.Error   -> _loginState.value = LoginUiState.Error(r.message)
+                is NetworkResult.Loading -> { /* never happens here */
+                }
             }
         }
     }
 
     /** تغییر رمز عبور */
-    fun changePassword(oldPassword: String, newPassword: String, confirmation: String) {
+    fun changePassword(
+        oldPassword: String,
+        newPassword: String,
+        confirmation: String
+    ) {
         when {
-            oldPassword.isBlank() -> {
+            oldPassword.isBlank()       -> {
                 _changePasswordState.value = ChangePasswordUiState.Error("رمز فعلی را وارد کنید")
                 return
             }
-            newPassword.length < 8 -> {
+
+            newPassword.length < 8      -> {
                 _changePasswordState.value = ChangePasswordUiState.Error("رمز جدید باید حداقل ۸ کاراکتر باشد")
                 return
             }
+
             newPassword != confirmation -> {
                 _changePasswordState.value = ChangePasswordUiState.Error("تکرار رمز با رمز جدید یکسان نیست")
                 return
             }
-            newPassword == oldPassword -> {
+
+            newPassword == oldPassword  -> {
                 _changePasswordState.value = ChangePasswordUiState.Error("رمز جدید باید با رمز فعلی فرق کند")
                 return
             }
@@ -76,15 +99,25 @@ class AuthViewModel(
 
         _changePasswordState.value = ChangePasswordUiState.Loading
         viewModelScope.launch {
-            when (val r = authRepository.changePassword(oldPassword, newPassword, confirmation)) {
+            when (val r = authRepository.changePassword(
+                oldPassword,
+                newPassword,
+                confirmation
+            )) {
                 is NetworkResult.Success -> _changePasswordState.value = ChangePasswordUiState.Success
-                is NetworkResult.Error -> _changePasswordState.value = ChangePasswordUiState.Error(r.message)
-                is NetworkResult.Loading -> { /* never */ }
+                is NetworkResult.Error   -> _changePasswordState.value = ChangePasswordUiState.Error(r.message)
+                is NetworkResult.Loading -> { /* never */
+                }
             }
         }
     }
 
     /** ریست state به Idle (مثلاً بعد از نمایش Snackbar) */
-    fun resetLoginState() { _loginState.value = LoginUiState.Idle }
-    fun resetChangePasswordState() { _changePasswordState.value = ChangePasswordUiState.Idle }
+    fun resetLoginState() {
+        _loginState.value = LoginUiState.Idle
+    }
+
+    fun resetChangePasswordState() {
+        _changePasswordState.value = ChangePasswordUiState.Idle
+    }
 }

@@ -26,20 +26,25 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,6 +102,13 @@ fun DashboardScreen(
         viewModel.refresh()
     }
 
+    // Pull-to-refresh state — وقتی loading تمام شد، انیمیشن را خاموش کن
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullState = rememberPullToRefreshState()
+    LaunchedEffect(state.loading) {
+        if (!state.loading) isRefreshing = false
+    }
+
     // یادآوری بدهی — در ViewModel مدیریت می‌شود (فقط یک‌بار در هر نشست)
     val currentDebt = state.finance?.debt
             ?: state.child?.balance?.debt
@@ -125,107 +137,146 @@ fun DashboardScreen(
                 state.loading -> LoadingContent()
                 state.error != null -> ErrorContent(
                     message = state.error!!,
-                    onRetry = { viewModel.refresh() })
+                    onRetry = { viewModel.refresh(force = true) })
 
-                else -> LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 64.dp),
-                    contentPadding = PaddingValues(
-                        horizontal = 16.dp,
-                        vertical = 12.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
-                    // اسلایدر - بدون هدر، بک‌گراند شیشه‌ای روی عکس
-                    if (state.recentNews.isNotEmpty()) {
-                        item {
-                            NewsSlider(
-                                news = state.recentNews,
-                                onSeeAll = onNavigateToNews,
-                                onNewsClick = onNavigateToNewsDetail,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    // اخبار افقی با عکس - زیر اسلایدر - کوچکتر + شیشه‌ای
-                    if (state.recentNews.isNotEmpty()) {
-                        item {
-                            SectionHeaderWithAction(
-                                title = "اخبار",
-                                actionText = "همه",
-                                onAction = onNavigateToNews
-                            )
-                            Spacer(Modifier.height(10.dp))
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                contentPadding = PaddingValues(end = 8.dp)
-                            ) {
-                                items(
-                                    state.recentNews,
-                                    key = { it.id }) { news ->
-                                    NewsHorizontalCardSmall(
-                                        news = news,
-                                        token = token,
-                                        onClick = { onNavigateToNewsDetail(news.id) })
+                else -> {
+                    @OptIn(ExperimentalMaterial3Api::class) PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = {
+                            isRefreshing = true
+                            viewModel.refresh(force = true)
+                        },
+                        state = pullState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 64.dp)
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                horizontal = 16.dp,
+                                vertical = 12.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(18.dp)
+                        ) {
+                            // بنر کش آفلاین — وقتی اینترنت نیست ولی داده‌ی ذخیره‌شده داریم
+                            if (state.isFromCache) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0xFFFFC107).copy(alpha = 0.15f))
+                                            .border(
+                                                0.5.dp,
+                                                Color(0xFFFFC107).copy(alpha = 0.3f),
+                                                RoundedCornerShape(12.dp)
+                                            )
+                                            .padding(
+                                                horizontal = 12.dp,
+                                                vertical = 8.dp
+                                            )
+                                    ) {
+                                        Text(
+                                            text = "نمایش داده‌های ذخیره‌شده (آفلاین) — برای به‌روزرسانی پایین بکشید",
+                                            color = Color(0xFFFFC107),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
                                 }
                             }
+
+                            // اسلایدر - بدون هدر، بک‌گراند شیشه‌ای روی عکس
+                            if (state.recentNews.isNotEmpty()) {
+                                item {
+                                    NewsSlider(
+                                        news = state.recentNews,
+                                        onSeeAll = onNavigateToNews,
+                                        onNewsClick = onNavigateToNewsDetail,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+
+                            // اخبار افقی با عکس - زیر اسلایدر - کوچکتر + شیشه‌ای
+                            if (state.recentNews.isNotEmpty()) {
+                                item {
+                                    SectionHeaderWithAction(
+                                        title = "اخبار",
+                                        actionText = "همه",
+                                        onAction = onNavigateToNews
+                                    )
+                                    Spacer(Modifier.height(10.dp))
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        contentPadding = PaddingValues(end = 8.dp)
+                                    ) {
+                                        items(
+                                            state.recentNews,
+                                            key = { it.id }) { news ->
+                                            NewsHorizontalCardSmall(
+                                                news = news,
+                                                token = token,
+                                                onClick = { onNavigateToNewsDetail(news.id) })
+                                        }
+                                    }
+                                }
+                            }
+
+                            // پروفایل بعد از اخبار نمایش داده شود
+                            item {
+                                PlayerCard(
+                                    playerName = state.child?.fullName
+                                            ?: state.user?.fullName
+                                            ?: "بازیکن",
+                                    avatarUrl = state.child?.avatarUrl
+                                            ?: state.user?.avatarUrl,
+                                    ageGroupTitle = state.child?.currentClass?.ageGroupTitle
+                                            ?: state.child?.currentClass?.title,
+                                    debt = state.finance?.debt
+                                            ?: state.child?.balance?.debt
+                                            ?: 0L,
+                                    isDebtor = state.finance?.isDebtor
+                                            ?: ((state.finance?.debt
+                                                    ?: 0L) > 0 || (state.child?.balance?.debt
+                                                    ?: 0L) > 0),
+                                    classFees = state.finance?.classFees
+                                            ?: emptyList(),
+                                    onClick = onNavigateToProfile
+                                )
+                            }
+
+                            // کلاس پیش‌رو - فقط یکی + دکمه همه طلایی
+                            if (state.upcoming.isNotEmpty()) {
+                                item {
+                                    SectionHeaderWithAction(
+                                        title = "کلاس پیش‌رو",
+                                        actionText = "همه کلاس‌ها",
+                                        onAction = onNavigateToClasses,
+                                        actionColor = GoldPrimary
+                                    )
+                                    Spacer(Modifier.height(10.dp))
+                                    SessionCardSingle(
+                                        s = state.upcoming.first(),
+                                        onClick = onNavigateToClasses
+                                    )
+                                }
+                            }
+
+                            // دسترسی سریع - فقط گفتگوها، صورت حساب، مسابقات (حذف اخبار/کلاس/پروفایل)
+                            item {
+                                SectionTitle("دسترسی سریع")
+                                Spacer(Modifier.height(10.dp))
+                                QuickAccessGrid(
+                                    unreadChats = state.unreadChats,
+                                    onChats = onNavigateToChats,
+                                    onFinance = onNavigateToFinance,
+                                    onMatches = onNavigateToMatches
+                                )
+                            }
+
                         }
                     }
-
-                    // پروفایل بعد از اخبار نمایش داده شود
-                    item {
-                        PlayerCard(
-                            playerName = state.child?.fullName
-                                    ?: state.user?.fullName
-                                    ?: "بازیکن",
-                            avatarUrl = state.child?.avatarUrl
-                                    ?: state.user?.avatarUrl,
-                            ageGroupTitle = state.child?.currentClass?.ageGroupTitle
-                                    ?: state.child?.currentClass?.title,
-                            debt = state.finance?.debt
-                                    ?: state.child?.balance?.debt
-                                    ?: 0L,
-                            isDebtor = state.finance?.isDebtor
-                                    ?: ((state.finance?.debt
-                                            ?: 0L) > 0 || (state.child?.balance?.debt
-                                            ?: 0L) > 0),
-                            classFees = state.finance?.classFees
-                                    ?: emptyList(),
-                            onClick = onNavigateToProfile
-                        )
-                    }
-
-                    // کلاس پیش‌رو - فقط یکی + دکمه همه طلایی
-                    if (state.upcoming.isNotEmpty()) {
-                        item {
-                            SectionHeaderWithAction(
-                                title = "کلاس پیش‌رو",
-                                actionText = "همه کلاس‌ها",
-                                onAction = onNavigateToClasses,
-                                actionColor = GoldPrimary
-                            )
-                            Spacer(Modifier.height(10.dp))
-                            SessionCardSingle(
-                                s = state.upcoming.first(),
-                                onClick = onNavigateToClasses
-                            )
-                        }
-                    }
-
-                    // دسترسی سریع - فقط گفتگوها، صورت حساب، مسابقات (حذف اخبار/کلاس/پروفایل)
-                    item {
-                        SectionTitle("دسترسی سریع")
-                        Spacer(Modifier.height(10.dp))
-                        QuickAccessGrid(
-                            unreadChats = state.unreadChats,
-                            onChats = onNavigateToChats,
-                            onFinance = onNavigateToFinance,
-                            onMatches = onNavigateToMatches
-                        )
-                    }
-
                 }
             }
         }
@@ -575,13 +626,6 @@ private fun PlayerCard(
                             modifier = Modifier.size(14.dp)
                         )
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        null,
-                        tint = Color.White.copy(0.3f),
-                        modifier = Modifier.size(16.dp)
-                    )
                 }
             }
             // نمایش شهریه هر کلاس ثبت‌نام شده (خلاصه)
@@ -830,12 +874,6 @@ private fun QuickTileRow(
                 color = Color.White,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.weight(1f)
-            )
-            Icon(
-                Icons.Default.PlayArrow,
-                null,
-                tint = Color.White.copy(0.25f),
-                modifier = Modifier.size(18.dp)
             )
         }
     }
