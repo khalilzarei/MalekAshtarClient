@@ -26,8 +26,10 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -52,6 +54,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,6 +70,7 @@ import com.khz.malekclient.domain.model.NewsItem
 import com.khz.malekclient.ui.components.AvatarView
 import com.khz.malekclient.ui.components.ErrorContent
 import com.khz.malekclient.ui.components.GlassBackground
+import com.khz.malekclient.ui.components.FullScreenImageViewer
 import com.khz.malekclient.ui.components.GlassCard3D
 import com.khz.malekclient.ui.components.GlassTopBar
 import com.khz.malekclient.ui.components.LoadingContent
@@ -105,6 +109,7 @@ fun DashboardScreen(
     // Pull-to-refresh state — وقتی loading تمام شد، انیمیشن را خاموش کن
     var isRefreshing by remember { mutableStateOf(false) }
     val pullState = rememberPullToRefreshState()
+    var fullScreenAvatar by remember { mutableStateOf<Any?>(null) }
     LaunchedEffect(state.loading) {
         if (!state.loading) isRefreshing = false
     }
@@ -242,8 +247,8 @@ fun DashboardScreen(
                                                     ?: 0L) > 0),
                                     classFees = state.finance?.classFees
                                             ?: emptyList(),
-                                    onClick = onNavigateToProfile
-                                )
+                                    onClick = onNavigateToProfile,
+                                    onAvatarClick = { fullScreenAvatar = it })
                             }
 
                             // کلاس پیش‌رو - فقط یکی + دکمه همه طلایی
@@ -279,6 +284,14 @@ fun DashboardScreen(
                     }
                 }
             }
+        }
+        // نمایش تمام‌صفحه آواتار داشبورد
+        fullScreenAvatar?.let { model ->
+            FullScreenImageViewer(
+                model = model,
+                title = state.child?.fullName
+                        ?: state.user?.fullName,
+                onDismiss = { fullScreenAvatar = null })
         }
     }
 }
@@ -517,7 +530,8 @@ private fun PlayerCard(
     debt: Long,
     isDebtor: Boolean,
     classFees: List<com.khz.malekclient.domain.model.ClassFee>,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onAvatarClick: (Any?) -> Unit = {}
 ) {
     GlassCard3D(onClick = onClick) {
         Column(
@@ -528,12 +542,17 @@ private fun PlayerCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AvatarView(
-                    name = playerName,
-                    avatarUrl = avatarUrl,
-                    size = 64.dp,
-                    accentColor = GoldPrimary
-                )
+                Box(
+                    modifier = Modifier.clickable {
+                        if (!avatarUrl.isNullOrBlank()) onAvatarClick(avatarUrl)
+                    }) {
+                    AvatarView(
+                        name = playerName,
+                        avatarUrl = avatarUrl,
+                        size = 64.dp,
+                        accentColor = GoldPrimary
+                    )
+                }
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -626,6 +645,13 @@ private fun PlayerCard(
                             modifier = Modifier.size(14.dp)
                         )
                     }
+                    Spacer(Modifier.height(4.dp))
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        null,
+                        tint = Color.White.copy(0.3f),
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
             // نمایش شهریه هر کلاس ثبت‌نام شده (خلاصه)
@@ -803,23 +829,29 @@ private fun QuickAccessGrid(
     onMatches: () -> Unit
 ) {
     // تک ستون، هر آیتم یک ردیف با آیکن + تایتل
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row {
         QuickTileRow(
-            Icons.Default.Chat,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             "گفتگوها",
-            badge = unreadChats,
             onClick = onChats
         )
+        Spacer(Modifier.width(5.dp))
         QuickTileRow(
-            Icons.Default.Star,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             "صورت حساب",
-            badge = 0,
             onClick = onFinance
         )
+
+        Spacer(Modifier.width(5.dp))
         QuickTileRow(
-            Icons.Default.CalendarMonth,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             "مسابقات",
-            badge = 0,
             onClick = onMatches
         )
     }
@@ -827,55 +859,27 @@ private fun QuickAccessGrid(
 
 @Composable
 private fun QuickTileRow(
-    icon: ImageVector,
+    modifier: Modifier,
     label: String,
-    badge: Int,
     onClick: () -> Unit
 ) {
-    GlassCard3D(onClick = onClick) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = 16.dp,
-                    vertical = 14.dp
-                ),
-            verticalAlignment = Alignment.CenterVertically
+    GlassCard3D(
+        onClick = onClick,
+        modifier = modifier
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(GoldPrimary.copy(0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                BadgedBox(badge = {
-                    if (badge > 0) {
-                        Badge(containerColor = RedError) {
-                            Text(
-                                text = badge.toPersianDigits(),
-                                color = Color.White,
-                                fontSize = 10.sp
-                            )
-                        }
-                    }
-                }) {
-                    Icon(
-                        icon,
-                        contentDescription = label,
-                        tint = GoldPrimary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-            Spacer(Modifier.width(12.dp))
             Text(
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
                 text = label,
                 color = Color.White,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                modifier = Modifier.weight(1f)
             )
         }
+
     }
 }
 

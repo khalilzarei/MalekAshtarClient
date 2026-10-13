@@ -426,6 +426,10 @@ fun AuthenticatedAsyncImage(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val cacheKey = remember(url) {
+        url
+                ?: ""
+    }
     val request = remember(
         url,
         token
@@ -439,6 +443,11 @@ fun AuthenticatedAsyncImage(
                 )
             }
             .crossfade(true)
+            .memoryCacheKey(cacheKey)
+            .diskCacheKey(cacheKey)
+            .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+            .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+            .networkCachePolicy(coil.request.CachePolicy.ENABLED)
             .build()
     }
     AsyncImage(

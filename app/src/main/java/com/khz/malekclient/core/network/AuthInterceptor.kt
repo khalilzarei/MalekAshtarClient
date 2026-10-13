@@ -43,6 +43,14 @@ class AuthInterceptor(private val sessionManager: SessionManager) : Interceptor 
                 .build()
         }
 
-        return chain.proceed(request)
+        val response = chain.proceed(request)
+        // 401 = توکن نامعتبر/منقضی → سشن را پاک کن تا به لاگین برگردد
+        if (response.code == 401) {
+            try {
+                runBlocking { sessionManager.clearSession() }
+            } catch (_: Exception) {
+            }
+        }
+        return response
     }
 }

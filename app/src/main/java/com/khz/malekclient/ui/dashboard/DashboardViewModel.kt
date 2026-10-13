@@ -1,6 +1,5 @@
 package com.khz.malekclient.ui.dashboard
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
@@ -70,12 +69,6 @@ class DashboardViewModel(
 
                 val firstChild = (children as? NetworkResult.Success)?.data?.firstOrNull()
                 val allSessions = (schedule as? NetworkResult.Success)?.data
-                allSessions?.forEach {
-                    Log.d(
-                        "Dashboard",
-                        "session id=${it.id} date='${it.sessionDate}' time='${it.startTime}' status='${it.status}'"
-                    )
-                }
                 val upcoming = allSessions?.filter {
                     isUpcoming(
                         it.sessionDate,

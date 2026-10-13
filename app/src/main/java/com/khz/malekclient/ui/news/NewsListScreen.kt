@@ -502,6 +502,7 @@ fun AuthenticatedImage(
     contentScale: ContentScale = ContentScale.Crop
 ) {
     val context = LocalContext.current
+    val cacheKey = remember(url) { url }
     val request = remember(
         url,
         token
@@ -515,6 +516,11 @@ fun AuthenticatedImage(
                 )
             }
             .crossfade(true)
+            .memoryCacheKey(cacheKey)
+            .diskCacheKey(cacheKey)
+            .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+            .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+            .networkCachePolicy(coil.request.CachePolicy.ENABLED)
             .build()
     }
     SubcomposeAsyncImage(

@@ -54,6 +54,7 @@ import com.khz.malekclient.domain.model.Guardian
 import com.khz.malekclient.domain.model.PlayerProfile
 import com.khz.malekclient.ui.components.AvatarCropDialog
 import com.khz.malekclient.ui.components.AvatarView
+import com.khz.malekclient.ui.components.FullScreenImageViewer
 import com.khz.malekclient.ui.components.ErrorContent
 import com.khz.malekclient.ui.components.GlassBackground
 import com.khz.malekclient.ui.components.GlassCard3D
@@ -76,6 +77,7 @@ fun ProfileScreen(
     val showLogoutDialog = remember { mutableStateOf(false) }
     val localPreviewUri = remember { mutableStateOf<Uri?>(null) }
     val cropUri = remember { mutableStateOf<Uri?>(null) }
+    val fullScreenAvatar = remember { mutableStateOf<Any?>(null) }
 
     // انتخاب عکس -> باز کردن ادیتور کراپ شبیه تلگرام
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -264,7 +266,8 @@ fun ProfileScreen(
                                 onDeleteAvatar = {
                                     localPreviewUri.value = null
                                     viewModel.deleteAvatar()
-                                })
+                                },
+                                onAvatarClick = { fullScreenAvatar.value = it })
                         }
 
                         // اطلاعات حساب کاربری (user) - قابل ویرایش به جز کد ملی
@@ -342,6 +345,14 @@ fun ProfileScreen(
                         cropUri.value = null
                     })
             }
+            // نمایش تمام‌صفحه آواتار با زوم
+            fullScreenAvatar.value?.let { model ->
+                FullScreenImageViewer(
+                    model = model,
+                    title = state.profile?.player?.fullName
+                            ?: state.profile?.user?.fullName,
+                    onDismiss = { fullScreenAvatar.value = null })
+            }
         }
     }
 }
@@ -378,7 +389,8 @@ private fun PlayerHeaderCard(
     onCancel: () -> Unit,
     onSave: () -> Unit,
     onPickImage: () -> Unit,
-    onDeleteAvatar: () -> Unit
+    onDeleteAvatar: () -> Unit,
+    onAvatarClick: (Any?) -> Unit = {}
 ) {
     val player = profile.player
     val user = profile.user
@@ -389,7 +401,13 @@ private fun PlayerHeaderCard(
                 verticalAlignment = Alignment.Top
             ) {
                 // آواتار بزرگ با دکمه ویرایش + پیش‌نمایش لوکال
-                Box {
+                Box(
+                    modifier = Modifier.clickable {
+                        val model = localUri
+                                ?: player?.avatarUrl
+                                ?: user.avatarUrl
+                        if (model != null) onAvatarClick(model)
+                    }) {
                     AvatarView(
                         name = player?.fullName
                                 ?: user.fullName,
@@ -464,11 +482,15 @@ private fun PlayerHeaderCard(
                         Spacer(Modifier.height(2.dp))
                     }
                     if (!player?.birthDate.isNullOrBlank()) {
+                        val jalali = DateUtils.gregorianToJalali(
+                            player?.birthDate
+                                    ?: ""
+                        )
+                            .toPersianDigits()
+                        val gregorian = player?.birthDate?.take(10)
+                                ?: ""
                         Text(
-                            text = "تولد: ${
-                                DateUtils.toJalaliReadable(player?.birthDate)
-                                    .toPersianDigits()
-                            }",
+                            text = "تولد: $jalali  ($gregorian)",
                             color = Color.White.copy(0.6f),
                             style = MaterialTheme.typography.bodySmall
                         )
